@@ -5,7 +5,7 @@ import { MessageList } from '@/components/MessageList';
 import { ChatInput } from '@/components/ChatInput';
 import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Plus } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 export function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -73,7 +73,7 @@ export function ChatPage() {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="h-[calc(100vh-56px)] bg-background overflow-hidden">
+    <div className="h-screen bg-background overflow-hidden">
       {/* 移动端遮罩 */}
       {showSessions && (
         <div
@@ -101,36 +101,25 @@ export function ChatPage() {
         <main className="flex-1 flex flex-col min-w-0 h-full p-4 pl-2 sm:pl-4 overflow-hidden">
           {activeSessionId ? (
             <div className="h-full flex flex-col bg-card rounded-xl border border-stone-200/60 overflow-hidden">
-              {/* 头部 */}
+              {/* 头部 - 移除新会话按钮 */}
               <header className="flex-shrink-0 px-5 py-3.5 border-b border-stone-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowSessions(!showSessions)}
-                      className="sm:hidden h-8 w-8 text-stone-400 hover:text-stone-600"
-                    >
-                      {showSessions ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-                    </Button>
-                    <div>
-                      <h1 className="font-medium text-stone-800 text-sm">
-                        {activeSession?.name || '新会话'}
-                      </h1>
-                      <p className="text-xs text-stone-400 mt-0.5">
-                        {activeSessionMessages.length} 条消息
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    onClick={handleCreateSession}
-                    className="text-stone-400 hover:text-stone-600 gap-1.5 h-8"
+                    size="icon"
+                    onClick={() => setShowSessions(!showSessions)}
+                    className="sm:hidden h-8 w-8 text-stone-400 hover:text-stone-600"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline text-xs">新会话</span>
+                    {showSessions ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
                   </Button>
+                  <div>
+                    <h1 className="font-medium text-stone-800 text-sm">
+                      {activeSession?.name || '新会话'}
+                    </h1>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {activeSessionMessages.length} 条消息
+                    </p>
+                  </div>
                 </div>
               </header>
 
@@ -161,7 +150,6 @@ export function ChatPage() {
                   onClick={handleCreateSession}
                   className="bg-primary hover:bg-primary-600 text-primary-foreground"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
                   创建新会话
                 </Button>
               </div>
