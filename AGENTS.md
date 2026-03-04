@@ -1,0 +1,4 @@
+- 使用 bun 替代 node 和 npm
+- **项目架构**: 见 [./docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- **UI 设计规范**: 见 [./docs/UI-DESIGN.md](./docs/UI-DESIGN.md) - 暖色调简约风格设计系统
+- **AI 开发规范**: 见 [./docs/ai-guidelines.md](./docs/ai-guidelines.md)

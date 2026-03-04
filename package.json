@@ -1,0 +1,20 @@
+{
+  "name": "agent-platform",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "bun run --filter @agent/server dev",
+    "dev:cli": "bun run --filter @agent/cli dev",
+    "dev:web": "bun run --filter @agent/web dev",
+    "dev": "bun run dev:server & bun run dev:web",
+    "generate:sdk": "bun run --filter @agent/sdk generate",
+    "build": "bun run --filter '*' build",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
