@@ -4,7 +4,7 @@
 
 **Goal:** 实现会话持久化存储，支持多会话管理和消息历史记录。
 
-**Architecture:** 在 CLI 层实现 SessionStore 类管理文件存储（JSON/JSONL），按 XDG 规范存放在 `~/.local/share/agent-cli/`。新增 CLI 命令 `/new`, `/list`, `/switch` 等管理会话。
+**Architecture:** 在 CLI 层实现 SessionStore 类管理文件存储（JSON/JSONL），按 XDG 规范存放在 `~/.local/share/littlething/`。新增 CLI 命令 `/new`, `/list`, `/switch` 等管理会话。
 
 **Tech Stack:** Bun + TypeScript, 原生 fs API
 
@@ -69,7 +69,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import type { Message, SessionMeta, SessionIndex, Session } from './types.js';
 
-const DATA_DIR = join(homedir(), '.local', 'share', 'agent-cli', 'sessions');
+const DATA_DIR = join(homedir(), '.local', 'share', 'littlething', 'sessions');
 const INDEX_FILE = join(DATA_DIR, 'index.json');
 
 function generateId(): string {
@@ -261,9 +261,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const CONFIG_DIR = join(homedir(), '.config', 'agent-cli');
+const CONFIG_DIR = join(homedir(), '.config', 'littlething');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
-const DATA_DIR = join(homedir(), '.local', 'share', 'agent-cli');
+const DATA_DIR = join(homedir(), '.local', 'share', 'littlething');
 
 export interface CliConfig {
   serverUrl: string;
@@ -585,7 +585,7 @@ export async function startInteractiveChat(config: CliConfig) {
 
   // 获取或创建会话
   const session = store.getOrCreateSession();
-  console.log(`\n🤖 Agent Chat - ${session.meta.name}\n`);
+  console.log(`\n🤖 little thing - ${session.meta.name}\n`);
   console.log('Type your message and press Enter.');
   console.log('Commands: /new, /list, /switch, /delete, /rename, /clear, /quit\n');
 
@@ -875,8 +875,8 @@ function handleConfig(args: string[]) {
     console.log(JSON.stringify(config, null, 2));
   } else {
     console.log('Usage:');
-    console.log('  agent config get                - Show current config');
-    console.log('  agent config set <key> <value>  - Set config value');
+    console.log('  lt config get                - Show current config');
+    console.log('  lt config set <key> <value>  - Set config value');
     console.log('');
     console.log('Keys: serverUrl, apiKey, model, dataDir');
   }
@@ -915,7 +915,7 @@ function handleSessions(args: string[]) {
     case 'switch': {
       const id = args[1];
       if (!id) {
-        console.log('Usage: agent sessions switch <session-id>');
+        console.log('Usage: lt sessions switch <session-id>');
         return;
       }
       if (store.switchSession(id)) {
@@ -930,7 +930,7 @@ function handleSessions(args: string[]) {
     case 'delete': {
       const id = args[1];
       if (!id) {
-        console.log('Usage: agent sessions delete <session-id>');
+        console.log('Usage: lt sessions delete <session-id>');
         return;
       }
       if (store.deleteSession(id)) {
@@ -943,24 +943,24 @@ function handleSessions(args: string[]) {
 
     default:
       console.log('Usage:');
-      console.log('  agent sessions list           - List all sessions');
-      console.log('  agent sessions new [name]     - Create new session');
-      console.log('  agent sessions switch <id>    - Switch to session');
-      console.log('  agent sessions delete <id>    - Delete session');
+      console.log('  lt sessions list           - List all sessions');
+      console.log('  lt sessions new [name]     - Create new session');
+      console.log('  lt sessions switch <id>    - Switch to session');
+      console.log('  lt sessions delete <id>    - Delete session');
   }
 }
 
 function showHelp() {
-  console.log('Agent CLI\n');
+  console.log('little thing CLI\n');
   console.log('Commands:');
-  console.log('  agent                    - Start interactive chat');
-  console.log('  agent chat               - Start interactive chat');
-  console.log('  agent config get         - Show config');
-  console.log('  agent config set         - Set config value');
-  console.log('  agent sessions list      - List sessions');
-  console.log('  agent sessions new       - Create session');
-  console.log('  agent sessions switch    - Switch session');
-  console.log('  agent help               - Show this help');
+  console.log('  lt                    - Start interactive chat');
+  console.log('  lt chat               - Start interactive chat');
+  console.log('  lt config get         - Show config');
+  console.log('  lt config set         - Set config value');
+  console.log('  lt sessions list      - List sessions');
+  console.log('  lt sessions new       - Create session');
+  console.log('  lt sessions switch    - Switch session');
+  console.log('  lt help               - Show this help');
 }
 
 main().catch((error) => {
@@ -986,7 +986,7 @@ git commit -m "feat(cli): add session management CLI commands"
 **Step 1: 添加会话管理说明**
 
 ```markdown
-# Agent Platform
+# little thing
 
 通用 LLM Agent 平台，支持 CLI 和 Web 客户端。
 
@@ -1020,7 +1020,7 @@ bun run dev:cli
 
 ## 会话管理
 
-CLI 支持多会话管理，数据存储在 `~/.local/share/agent-cli/`。
+CLI 支持多会话管理，数据存储在 `~/.local/share/littlething/`。
 
 ### 交互式命令
 
@@ -1037,16 +1037,16 @@ CLI 支持多会话管理，数据存储在 `~/.local/share/agent-cli/`。
 
 ```bash
 # 列出所有会话
-agent sessions list
+lt sessions list
 
 # 创建新会话
-agent sessions new "代码调试"
+lt sessions new "代码调试"
 
 # 切换到会话
-agent sessions switch 20250301-abc123
+lt sessions switch 20250301-abc123
 
 # 删除会话
-agent sessions delete 20250301-abc123
+lt sessions delete 20250301-abc123
 ```
 
 ## 项目结构
@@ -1061,8 +1061,8 @@ packages/
 ## 数据存储
 
 按 XDG 规范存储：
-- 配置：`~/.config/agent-cli/config.json`
-- 数据：`~/.local/share/agent-cli/sessions/`
+- 配置：`~/.config/littlething/config.json`
+- 数据：`~/.local/share/littlething/sessions/`
 
 ## 环境变量
 
@@ -1088,15 +1088,15 @@ git commit -m "docs: add session management documentation"
 Phase 2 完成后验证：
 
 - [ ] `bun run dev:cli` 启动后自动创建或恢复会话
-- [ ] 发送消息后，消息自动保存到 `~/.local/share/agent-cli/sessions/{id}.jsonl`
+- [ ] 发送消息后，消息自动保存到 `~/.local/share/littlething/sessions/{id}.jsonl`
 - [ ] `/new` 创建新会话，当前会话切换到新会话
 - [ ] `/list` 显示所有会话列表
 - [ ] `/switch <id>` 切换会话并显示历史消息
 - [ ] `/rename <name>` 重命名当前会话
 - [ ] `/delete <id>` 删除会话
 - [ ] 重启 CLI 后自动恢复上次活跃会话
-- [ ] `agent sessions list` 命令行列出会话
-- [ ] `agent sessions new` 命令行创建会话
+- [ ] `lt sessions list` 命令行列出会话
+- [ ] `lt sessions new` 命令行创建会话
 
 ## 下一步（Phase 3）
 

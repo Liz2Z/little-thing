@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Agent Platform 是一个通用型 LLM Agent 平台，支持多客户端（CLI/Web）和可扩展的工具系统。
+**little thing** 是一个通用型 LLM Agent 平台，支持多客户端（CLI/Web）和可扩展的工具系统。
 
 ## 技术栈
 

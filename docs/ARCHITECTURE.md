@@ -41,7 +41,7 @@ CLI ↔ Server: HTTP API (简洁)
 ```bash
 little-thing/
 ├── packages/
-│   ├── server/          # 后端服务
+│   ├── server/          # 后端服务 (@littlething/server)
 │   │   ├── src/
 │   │   │   ├── index.ts      # 服务入口
 │   │   │   ├── agent/        # Agent 核心
@@ -50,14 +50,17 @@ little-thing/
 │   │   │   └── providers/    # LLM 提供商
 │   │   └── package.json
 │   │
-│   ├── cli/             # 命令行客户端
+│   ├── cli/             # 命令行客户端 (@littlething/cli)
 │   │   ├── src/
 │   │   │   ├── index.ts      # CLI 入口
 │   │   │   ├── chat.ts       # 交互式对话
 │   │   │   └── api.ts        # server API 封装
 │   │   └── package.json
 │   │
-│   └── web/             # Web 客户端（预留）
+│   ├── sdk/             # SDK 包 (@littlething/sdk)
+│   │   └── package.json
+│   │
+│   └── web/             # Web 客户端 (@littlething/web)
 │       └── package.json
 │
 ├── bunfig.toml          # Bun workspace 配置

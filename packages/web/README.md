@@ -1,6 +1,6 @@
-# Agent Web UI
+# little thing Web UI
 
-Agent Platform 的 Web 用户界面。
+little thing 的 Web 用户界面。
 
 ## 开发
 

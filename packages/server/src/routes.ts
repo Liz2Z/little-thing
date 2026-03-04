@@ -287,9 +287,9 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     return c.json({
       openapi: '3.1.0',
       info: {
-        title: 'Agent Platform API',
+        title: 'little thing API',
         version: '1.0.0',
-        description: 'API for Agent Platform - a chat application with session management',
+        description: 'API for little thing - a chat application with session management',
       },
       servers: [
         {

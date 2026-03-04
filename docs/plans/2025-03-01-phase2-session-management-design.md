@@ -7,8 +7,8 @@
 ## 架构
 
 存储采用 JSON + JSONL 文件格式，按 XDG 规范存放：
-- 数据目录：`~/.local/share/agent-cli/`
-- 配置文件：`~/.config/agent-cli/`
+- 数据目录：`~/.local/share/littlething/`
+- 配置文件：`~/.config/littlething/`
 
 ## 数据模型
 
@@ -42,7 +42,7 @@ interface SessionIndex {
 ### 目录结构
 
 ```
-~/.local/share/agent-cli/
+~/.local/share/littlething/
 ├── sessions/
 │   ├── index.json              # 会话元数据索引
 │   └── {sessionId}.jsonl       # 各会话消息历史

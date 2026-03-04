@@ -1,16 +1,16 @@
 {
-  "name": "@agent/cli",
+  "name": "@littlething/cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "agent": "./src/index.ts"
+    "lt": "./src/index.ts"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "tsc"
   },
   "dependencies": {
-    "@agent/sdk": "workspace:*"
+    "@littlething/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

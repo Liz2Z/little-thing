@@ -1,4 +1,4 @@
-import { ApiClient as SdkClient, type paths } from '@agent/sdk';
+import { ApiClient as SdkClient, type paths } from '@littlething/sdk';
 
 export type Message = paths['/sessions/{id}']['get']['responses']['200']['content']['application/json']['session']['messages'][number];
 export type SessionMeta = paths['/sessions']['get']['responses']['200']['content']['application/json']['sessions'][number];

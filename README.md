@@ -1,4 +1,4 @@
-# Agent Platform
+# little thing
 
 基于 LLM 的智能助手平台，支持 CLI 和 Web 客户端。
 
@@ -65,23 +65,23 @@ packages/
 
 ```bash
 # 列出所有会话
-agent sessions list
+lt sessions list
 
 # 创建新会话
-agent sessions new "代码调试"
+lt sessions new "代码调试"
 
 # 切换到会话
-agent sessions switch 20250301-abc123
+lt sessions switch 20250301-abc123
 
 # 删除会话
-agent sessions delete 20250301-abc123
+lt sessions delete 20250301-abc123
 ```
 
 ## 数据存储
 
 按 XDG 规范存储：
-- 配置：`~/.config/agent-cli/config.json`
-- 数据：`~/.local/share/agent-cli/sessions/`
+- 配置：`~/.config/littlething/config.json`
+- 数据：`~/.local/share/littlething/sessions/`
 
 ## 环境变量
 

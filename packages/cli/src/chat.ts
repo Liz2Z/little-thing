@@ -32,7 +32,7 @@ export async function startInteractiveChat(config: CliConfig) {
     activeSessionId = meta.id;
   }
 
-  console.log(`\n🤖 Agent Chat - ${session.name}\n`);
+  console.log(`\n🤖 little thing - ${session.name}\n`);
   console.log('Type your message and press Enter.');
   console.log('Commands: /new, /list, /switch, /delete, /rename, /clear, /quit\n');
 

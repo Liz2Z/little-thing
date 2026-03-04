@@ -1,5 +1,5 @@
 {
-  "name": "@agent/server",
+  "name": "@littlething/server",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",

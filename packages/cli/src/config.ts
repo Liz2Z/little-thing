@@ -2,9 +2,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const CONFIG_DIR = join(homedir(), '.config', 'agent-cli');
+const CONFIG_DIR = join(homedir(), '.config', 'littlething');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
-const DATA_DIR = join(homedir(), '.local', 'share', 'agent-cli');
+const DATA_DIR = join(homedir(), '.local', 'share', 'littlething');
 
 export interface CliConfig {
   serverUrl: string;

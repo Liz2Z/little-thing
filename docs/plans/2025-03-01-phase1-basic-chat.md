@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 搭建 monorepo 结构，实现 server 基础 HTTP 服务和 CLI 交互式对话，支持 Anthropic 格式的 LLM 调用和流式输出。
+**Goal:** 搭建 little thing monorepo 结构，实现 server 基础 HTTP 服务和 CLI 交互式对话，支持 Anthropic 格式的 LLM 调用和流式输出。
 
 **Architecture:** Server 使用 Hono 提供 HTTP API，CLI 使用 readline 实现交互式终端，两者通过 HTTP 通信。LLM 调用直接使用 fetch 对接 Anthropic 兼容接口（GLM/Kimi）。
 
@@ -51,7 +51,7 @@ registry = "https://registry.npmjs.org"
 
 ```json
 {
-  "name": "@agent/server",
+  "name": "@littlething/server",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -73,18 +73,18 @@ registry = "https://registry.npmjs.org"
 
 ```json
 {
-  "name": "@agent/cli",
+  "name": "@littlething/cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "agent": "./dist/index.js"
+    "lt": "./dist/index.js"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "tsc"
   },
   "dependencies": {
-    "@agent/server": "workspace:*"
+    "@littlething/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -97,7 +97,7 @@ registry = "https://registry.npmjs.org"
 
 ```json
 {
-  "name": "@agent/web",
+  "name": "@littlething/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -123,8 +123,8 @@ bun install
 **Step 8: Commit**
 
 ```bash
-git add .
-git commit -m "chore: setup monorepo structure with server, cli, web packages"
+git add .```bash
+git commit -m "chore: setup little-thing monorepo structure with server, cli, web packages"
 ```
 
 ---
@@ -537,7 +537,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
-const CONFIG_DIR = join(homedir(), ".config", "agent-cli");
+const CONFIG_DIR = join(homedir(), ".config", "littlething");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 export interface CliConfig {
@@ -683,7 +683,7 @@ export async function startInteractiveChat(config: CliConfig) {
     process.exit(1);
   }
 
-  console.log("\n🤖 Agent Chat\n");
+  console.log("\n🤖 little thing Chat\n");
   console.log("Type your message and press Enter.");
   console.log("Commands: /quit, /exit, /clear\n");
 
@@ -795,13 +795,13 @@ function handleConfig(args: string[]) {
 }
 
 function showHelp() {
-  console.log("Agent CLI\n");
+  console.log("little thing CLI\n");
   console.log("Commands:");
-  console.log("  agent              - Start interactive chat");
-  console.log("  agent chat         - Start interactive chat");
-  console.log("  agent config get   - Show config");
-  console.log("  agent config set   - Set config value");
-  console.log("  agent help         - Show this help");
+  console.log("  lt              - Start interactive chat");
+  console.log("  lt chat         - Start interactive chat");
+  console.log("  lt config get   - Show config");
+  console.log("  lt config set   - Set config value");
+  console.log("  lt help         - Show this help");
 }
 
 main().catch((error) => {
@@ -814,11 +814,11 @@ main().catch((error) => {
 
 ```json
 {
-  "name": "@agent/cli",
+  "name": "@littlething/cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "agent": "./src/index.ts"
+    "lt": "./src/index.ts"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -875,7 +875,7 @@ git commit -m "feat(cli): add interactive chat with streaming output"
 **Step 1: 创建 README**
 
 ````markdown
-# Agent Platform
+# little thing
 
 通用 LLM Agent 平台，支持 CLI 和 Web 客户端。
 
@@ -920,8 +920,8 @@ packages/
 ## CLI 命令
 
 - `bun run dev:cli` - 启动交互式对话
-- `agent config get` - 查看配置
-- `agent config set serverUrl <url>` - 设置服务器地址
+- `lt config get` - 查看配置
+- `lt config set serverUrl <url>` - 设置服务器地址
 
 ````
 

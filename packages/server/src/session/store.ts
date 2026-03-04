@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import type { Message, SessionMeta, SessionIndex, Session } from './types.js';
 
-const DATA_DIR = join(homedir(), '.local', 'share', 'agent-cli', 'sessions');
+const DATA_DIR = join(homedir(), '.local', 'share', 'littlething', 'sessions');
 const INDEX_FILE = join(DATA_DIR, 'index.json');
 
 function generateId(): string {

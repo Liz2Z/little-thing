@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 为 Agent Platform 构建现代化的 Web 用户界面，提供直观的聊天体验和会话管理功能
+**Goal:** 为 little thing 构建现代化的 Web 用户界面，提供直观的聊天体验和会话管理功能
 
 **Architecture:** 多页应用架构，React + Vite + Tailwind CSS + Zustand，通过 HTTP API 与 Server 通信
 
@@ -43,7 +43,7 @@ mkdir -p packages/web
 创建 `packages/web/package.json`:
 ```json
 {
-  "name": "@agent/web",
+  "name": "@littlething/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -222,7 +222,7 @@ export default {
 
 ```bash
 bun install
-bun run --filter @agent/web dev
+bun run --filter @littlething/web dev
 ```
 
 Expected: Vite dev server 启动在 http://localhost:5173，显示 "Agent Chat" 标题
@@ -247,7 +247,7 @@ git commit -m "feat(web): add Vite + React + Tailwind CSS base setup"
 **Step 1: 安装 React Router**
 
 ```bash
-cd packages/web && bun add react-router-dom
+bun add react-router-dom --filter @littlething/web
 ```
 
 **Step 2: 创建 Layout 组件**
@@ -333,7 +333,7 @@ export default function App() {
 
 ```bash
 # 确保开发服务器在运行
-bun run --filter @agent/web dev
+bun run --filter @littlething/web dev
 ```
 
 Expected:
@@ -599,7 +599,7 @@ export const useConfigStore = create<ConfigState>()(
       setConfig: (config) => set((state) => ({ ...state, ...config })),
     }),
     {
-      name: 'agent-config',
+      name: 'littlething-config',
     }
   )
 );
@@ -1223,10 +1223,10 @@ export function ChatPage() {
 ```bash
 # 确保 server 和 web 都在运行
 bun run dev:server
-bun run --filter @agent/web dev
+bun run --filter @littlething/web dev
 ```
 
-测试步骤：
+测试步骤:
 1. 打开 http://localhost:5173
 2. 自动创建会话
 3. 输入消息并发送
@@ -1588,7 +1588,7 @@ export function ChatPage() {
 
 ```bash
 # 测试移动端
-bun run --filter @agent/web dev
+bun run --filter @littlething/web dev
 ```
 
 使用浏览器开发者工具切换到移动视图测试。
@@ -1613,11 +1613,11 @@ git commit -m "feat(web): add mobile responsive design"
 修改根目录 `package.json`:
 ```json
 {
-  "name": "agent-platform",
+  "name": "little-thing",
   "scripts": {
-    "dev:server": "bun run --filter @agent/server dev",
-    "dev:cli": "bun run --filter @agent/cli dev",
-    "dev:web": "bun run --filter @agent/web dev",
+    "dev:server": "bun run --filter @littlething/server dev",
+    "dev:cli": "bun run --filter @littlething/cli dev",
+    "dev:web": "bun run --filter @littlething/web dev",
     "dev": "bun run dev:server & bun run dev:web"
   },
   "workspaces": ["packages/*"]
@@ -1628,9 +1628,9 @@ git commit -m "feat(web): add mobile responsive design"
 
 创建 `packages/web/README.md`:
 ```markdown
-# Agent Web UI
+# little thing Web UI
 
-Agent Platform 的 Web 用户界面。
+little thing 的 Web 用户界面。
 
 ## 开发
 
@@ -1640,12 +1640,12 @@ bun install
 
 # 启动开发服务器
 bun run dev:web
-
+```bash
 # 构建
-bun run --filter @agent/web build
+bun run --filter @littlething/web build
 
 # 预览构建结果
-bun run --filter @agent/web preview
+bun run --filter @littlething/web preview
 ```
 
 ## 功能
@@ -1753,18 +1753,19 @@ git commit -m "chore(web): cleanup and add gitignore"
 
 修改根目录 `README.md`:
 ```markdown
-# Agent Platform
+# little thing
 
 基于 LLM 的智能助手平台，支持多会话管理和实时对话。
 
 ## 架构
 
 ```
-agent-platform/
+little-thing/
 ├── packages/
-│   ├── server/    # HTTP API 服务器
-│   ├── cli/       # 命令行客户端
-│   └── web/       # Web 用户界面
+│   ├── server/    # HTTP API 服务器 (@littlething/server)
+│   ├── cli/       # 命令行客户端 (@littlething/cli)
+│   ├── sdk/       # SDK 包 (@littlething/sdk)
+│   └── web/       # Web 用户界面 (@littlething/web)
 ```
 
 ## 快速开始
