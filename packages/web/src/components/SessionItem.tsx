@@ -21,39 +21,34 @@ export function SessionItem({ session, isActive, onClick, onDelete }: SessionIte
     <div
       onClick={onClick}
       className={cn(
-        'group px-4 py-3.5 cursor-pointer transition-all duration-150',
-        'border-b border-stone-200 last:border-b-0',
+        'group px-3 py-2.5 cursor-pointer transition-all duration-150',
+        'hover:bg-stone-100',
         isActive 
-          ? 'bg-primary-50 border-l-[2px] border-l-primary border-r-0 border-t-0' 
-          : 'border-l-0 border-l-transparent hover:bg-stone-100'
+          ? 'bg-primary-50/70 rounded-lg' 
+          : 'rounded-lg'
       )}
     >
       <div className="flex justify-between items-start gap-2">
         <div className="flex-1 min-w-0">
           <h3 className={cn(
-            'font-medium text-sm truncate',
-            isActive ? 'text-primary-900' : 'text-stone-700'
+            'text-sm truncate',
+            isActive ? 'text-primary-900 font-medium' : 'text-stone-600'
           )}>
             {session.name}
           </h3>
-          <p className="text-[11px] text-stone-400 mt-1.5 flex items-center gap-1.5">
-            <span>{session.messageCount} 条消息</span>
-            <span className="text-stone-300">·</span>
-            <span>{new Date(session.updatedAt).toLocaleDateString('zh-CN', {
-              month: 'short',
-              day: 'numeric'
-            })}</span>
+          <p className="text-[11px] text-stone-400 mt-0.5">
+            {session.messageCount} 条消息
           </p>
         </div>
         <button
           onClick={handleDelete}
           className={cn(
             'opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded',
-            'text-stone-400 hover:text-destructive hover:bg-destructive/10'
+            'text-stone-300 hover:text-destructive hover:bg-destructive/5'
           )}
           title="删除会话"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3 h-3" />
         </button>
       </div>
     </div>

@@ -9,25 +9,30 @@ interface MessageListProps {
 
 export function MessageList({ messages }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   if (messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">开始新对话...</p>
+        <p className="text-stone-400 text-sm">开始新对话...</p>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="flex-1 p-4">
-      {messages.map((message, index) => (
-        <MessageBubble key={index} message={message} />
-      ))}
-      <div ref={bottomRef} />
+    <ScrollArea className="h-full" ref={scrollRef}>
+      <div className="p-5">
+        {messages.map((message, index) => (
+          <MessageBubble key={index} message={message} />
+        ))}
+        <div ref={bottomRef} />
+      </div>
     </ScrollArea>
   );
 }
