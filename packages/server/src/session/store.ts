@@ -1,10 +1,5 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import { JsonStore, JsonlStore } from '../storage/index.js';
 import type { Message, SessionMeta, SessionIndex, Session } from './types.js';
-
-const DATA_DIR = join(homedir(), '.local', 'share', 'littlething', 'sessions');
-const INDEX_FILE = join(DATA_DIR, 'index.json');
 
 function generateId(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -12,80 +7,51 @@ function generateId(): string {
   return `${date}-${random}`;
 }
 
-function ensureDataDir(): void {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-function getSessionFilePath(sessionId: string): string {
-  return join(DATA_DIR, `${sessionId}.jsonl`);
-}
-
 export class SessionStore {
-  private index: SessionIndex;
+  private indexStore: JsonStore<SessionIndex>;
+  private messageStores: Map<string, JsonlStore<Message>> = new Map();
 
   constructor() {
-    ensureDataDir();
-    this.index = this.loadIndex();
+    this.indexStore = new JsonStore<SessionIndex>(
+      'index.json',
+      { sessions: {} },
+      { category: 'data', subDir: 'sessions' }
+    );
   }
 
-  private loadIndex(): SessionIndex {
-    if (!existsSync(INDEX_FILE)) {
-      return { sessions: {} };
+  private getMessageStore(sessionId: string): JsonlStore<Message> {
+    if (!this.messageStores.has(sessionId)) {
+      this.messageStores.set(
+        sessionId,
+        new JsonlStore<Message>(`${sessionId}.jsonl`, {
+          category: 'data',
+          subDir: 'sessions',
+        })
+      );
     }
-    try {
-      const content = readFileSync(INDEX_FILE, 'utf-8');
-      return JSON.parse(content);
-    } catch {
-      return { sessions: {} };
-    }
-  }
-
-  private saveIndex(): void {
-    writeFileSync(INDEX_FILE, JSON.stringify(this.index, null, 2));
-  }
-
-  private loadMessages(sessionId: string): Message[] {
-    const filePath = getSessionFilePath(sessionId);
-    if (!existsSync(filePath)) {
-      return [];
-    }
-    try {
-      const content = readFileSync(filePath, 'utf-8');
-      return content
-        .trim()
-        .split('\n')
-        .filter(line => line.length > 0)
-        .map(line => JSON.parse(line));
-    } catch {
-      return [];
-    }
-  }
-
-  private appendMessage(sessionId: string, message: Message): void {
-    const filePath = getSessionFilePath(sessionId);
-    const line = JSON.stringify(message) + '\n';
-    appendFileSync(filePath, line);
+    return this.messageStores.get(sessionId)!;
   }
 
   getSession(sessionId: string): Session | null {
-    const meta = this.index.sessions[sessionId];
+    const index = this.indexStore.load();
+    const meta = index.sessions[sessionId];
     if (!meta) return null;
-    const messages = this.loadMessages(sessionId);
+    const messages = this.getMessageStore(sessionId).loadAll();
     return { meta, messages };
   }
 
   listSessions(): SessionMeta[] {
-    return Object.values(this.index.sessions).sort(
+    const index = this.indexStore.load();
+    return Object.values(index.sessions).sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
   }
 
   createSession(name?: string): SessionMeta {
+    const index = this.indexStore.load();
     const id = generateId();
     const now = new Date().toISOString();
-    const sessionName = name || `会话-${Object.keys(this.index.sessions).length + 1}`;
+    const sessionName = name || `会话-${Object.keys(index.sessions).length + 1}`;
 
     const meta: SessionMeta = {
       id,
@@ -95,48 +61,50 @@ export class SessionStore {
       messageCount: 0,
     };
 
-    this.index.sessions[id] = meta;
-    this.saveIndex();
+    index.sessions[id] = meta;
+    this.indexStore.save(index);
 
     return meta;
   }
 
   addMessage(sessionId: string, message: Message): boolean {
-    const meta = this.index.sessions[sessionId];
+    const index = this.indexStore.load();
+    const meta = index.sessions[sessionId];
     if (!meta) return false;
 
-    this.appendMessage(sessionId, message);
+    this.getMessageStore(sessionId).append(message);
+
     meta.messageCount++;
     meta.updatedAt = new Date().toISOString();
-    this.saveIndex();
+    this.indexStore.save(index);
+
     return true;
   }
 
   deleteSession(sessionId: string): boolean {
-    if (!this.index.sessions[sessionId]) {
+    const index = this.indexStore.load();
+    if (!index.sessions[sessionId]) {
       return false;
     }
 
-    delete this.index.sessions[sessionId];
-    this.saveIndex();
+    delete index.sessions[sessionId];
+    this.indexStore.save(index);
 
-    const filePath = getSessionFilePath(sessionId);
-    try {
-      unlinkSync(filePath);
-    } catch {
-      // Ignore delete errors
-    }
+    this.getMessageStore(sessionId).delete();
+    this.messageStores.delete(sessionId);
 
     return true;
   }
 
   renameSession(sessionId: string, newName: string): boolean {
-    const meta = this.index.sessions[sessionId];
+    const index = this.indexStore.load();
+    const meta = index.sessions[sessionId];
     if (!meta) return false;
 
     meta.name = newName;
     meta.updatedAt = new Date().toISOString();
-    this.saveIndex();
+    this.indexStore.save(index);
+
     return true;
   }
 }
