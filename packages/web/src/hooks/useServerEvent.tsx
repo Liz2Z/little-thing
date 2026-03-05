@@ -64,17 +64,16 @@ export function ServerEventProvider({
   options?: ServerEventOptions;
 }) {
   const [status, setStatus] = useState<'connected' | 'connecting' | 'disconnected'>(globalStatus);
-  const eventBusRef = useRef<EventBus<EventMap> | null>(globalEventBus);
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    const { eventBus } = createSSEConnection(options);
-    eventBusRef.current = eventBus;
-
     globalStatusListeners.add(setStatus);
+    setStatus(globalStatus);
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      createSSEConnection(options);
+    }
 
     return () => {
       globalStatusListeners.delete(setStatus);
@@ -83,7 +82,7 @@ export function ServerEventProvider({
 
   const contextValue: ServerEventContextValue = {
     status,
-    eventBus: eventBusRef.current || new EventBus<EventMap>(),
+    eventBus: globalEventBus || new EventBus<EventMap>(),
   };
 
   return (

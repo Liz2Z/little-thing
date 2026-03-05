@@ -4,16 +4,16 @@
  */
 
 import { create } from 'zustand';
-import { EventType, type TypedEvent, type SessionCreatedPayload, type SessionDeletedPayload, type SessionUpdatedPayload, type MessageReceivedPayload } from '@agent/sdk';
+import { EventType, type TypedEvent } from '@littlething/sdk';
 
 interface EventState {
   lastEvent: TypedEvent | null;
   sessionEvents: {
-    created: TypedEvent<EventType.SESSION_CREATED>[];
-    deleted: TypedEvent<EventType.SESSION_DELETED>[];
-    updated: TypedEvent<EventType.SESSION_UPDATED>[];
+    created: TypedEvent<'session:created'>[];
+    deleted: TypedEvent<'session:deleted'>[];
+    updated: TypedEvent<'session:updated'>[];
   };
-  messages: TypedEvent<EventType.MESSAGE_RECEIVED>[];
+  messages: TypedEvent<'message:received'>[];
   
   handleEvent: (event: TypedEvent) => void;
   clearEvents: () => void;
@@ -38,23 +38,23 @@ export const useEventStore = create<EventState>((set) => ({
         case EventType.SESSION_CREATED:
           newState.sessionEvents = {
             ...state.sessionEvents,
-            created: [...state.sessionEvents.created, event as TypedEvent<EventType.SESSION_CREATED>],
+            created: [...state.sessionEvents.created, event as TypedEvent<'session:created'>],
           };
           break;
         case EventType.SESSION_DELETED:
           newState.sessionEvents = {
             ...state.sessionEvents,
-            deleted: [...state.sessionEvents.deleted, event as TypedEvent<EventType.SESSION_DELETED>],
+            deleted: [...state.sessionEvents.deleted, event as TypedEvent<'session:deleted'>],
           };
           break;
         case EventType.SESSION_UPDATED:
           newState.sessionEvents = {
             ...state.sessionEvents,
-            updated: [...state.sessionEvents.updated, event as TypedEvent<EventType.SESSION_UPDATED>],
+            updated: [...state.sessionEvents.updated, event as TypedEvent<'session:updated'>],
           };
           break;
         case EventType.MESSAGE_RECEIVED:
-          newState.messages = [...state.messages, event as TypedEvent<EventType.MESSAGE_RECEIVED>];
+          newState.messages = [...state.messages, event as TypedEvent<'message:received'>];
           break;
       }
 
