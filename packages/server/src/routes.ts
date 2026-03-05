@@ -5,8 +5,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { describeRoute } from 'hono-openapi';
-import { zValidator } from '@hono/zod-validator';
+import { describeRoute, validator, resolver } from 'hono-openapi';
 import { z } from 'zod';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { SessionStore } from './session/store.js';
@@ -15,78 +14,17 @@ import { setupSSE, broadcastEvent } from './events/index.js';
 import { EventType, createEvent } from './events/index.js';
 
 const SessionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  messageCount: z.number(),
+  id: z.string().meta({ description: '会话 ID' }),
+  name: z.string().meta({ description: '会话名称' }),
+  createdAt: z.string().meta({ description: '创建时间' }),
+  updatedAt: z.string().meta({ description: '更新时间' }),
+  messageCount: z.number().meta({ description: '消息数量' }),
 });
 
 const MessageSchema = z.object({
-  role: z.enum(['user', 'assistant', 'system']),
-  content: z.string(),
-  timestamp: z.string(),
-});
-
-const SessionDetailSchema = SessionSchema.extend({
-  messages: z.array(MessageSchema),
-});
-
-const UsageSchema = z.object({
-  promptTokens: z.number(),
-  completionTokens: z.number(),
-  totalTokens: z.number(),
-});
-
-const ErrorSchema = z.object({
-  error: z.string(),
-});
-
-const SuccessSchema = z.object({
-  success: z.boolean(),
-});
-
-const HealthSchema = z.object({
-  status: z.string(),
-  model: z.string(),
-});
-
-const ListSessionsResponseSchema = z.object({
-  sessions: z.array(SessionSchema),
-});
-
-const CreateSessionRequestSchema = z.object({
-  name: z.string().optional(),
-});
-
-const CreateSessionResponseSchema = z.object({
-  session: SessionSchema,
-});
-
-const GetSessionResponseSchema = z.object({
-  session: SessionDetailSchema,
-});
-
-const RenameSessionRequestSchema = z.object({
-  name: z.string(),
-});
-
-const AddMessageRequestSchema = z.object({
-  role: z.enum(['user', 'assistant', 'system']),
-  content: z.string(),
-});
-
-const ChatRequestSchema = z.object({
-  message: z.string(),
-});
-
-const ChatResponseSchema = z.object({
-  response: z.string(),
-  usage: UsageSchema.optional(),
-});
-
-const ChatWithoutSessionRequestSchema = z.object({
-  messages: z.array(MessageSchema),
+  role: z.enum(['user', 'assistant', 'system']).meta({ description: '消息角色' }),
+  content: z.string().meta({ description: '消息内容' }),
+  timestamp: z.string().meta({ description: '消息时间' }),
 });
 
 export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: string }) {
@@ -107,10 +45,19 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'health.check',
       summary: '健康检查',
+      description: '检查服务是否正常运行',
       tags: ['System'],
       responses: {
         200: {
           description: '服务健康状态',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                status: z.string().meta({ description: '服务状态' }),
+                model: z.string().meta({ description: '当前使用的模型' }),
+              })),
+            },
+          },
         },
       },
     }),
@@ -123,10 +70,18 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.list',
       summary: '获取会话列表',
+      description: '获取所有会话的列表',
       tags: ['Sessions'],
       responses: {
         200: {
           description: '会话列表',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                sessions: z.array(SessionSchema).meta({ description: '会话列表' }),
+              })),
+            },
+          },
         },
       },
     }),
@@ -140,14 +95,24 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.create',
       summary: '创建新会话',
+      description: '创建一个新的聊天会话',
       tags: ['Sessions'],
       responses: {
         201: {
           description: '创建的会话',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                session: SessionSchema.meta({ description: '创建的会话' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', CreateSessionRequestSchema),
+    validator('json', z.object({
+      name: z.string().optional().meta({ description: '会话名称' }),
+    })),
     (c) => {
       const body = c.req.valid('json');
       const session = sessionStore.createSession(body.name);
@@ -170,13 +135,30 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.get',
       summary: '获取会话详情',
+      description: '根据 ID 获取会话的详细信息，包括消息历史',
       tags: ['Sessions'],
       responses: {
         200: {
           description: '会话详情',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                session: SessionSchema.extend({
+                  messages: z.array(MessageSchema).meta({ description: '消息列表' }),
+                }).meta({ description: '会话详情' }),
+              })),
+            },
+          },
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
@@ -194,13 +176,28 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.delete',
       summary: '删除会话',
+      description: '根据 ID 删除指定会话',
       tags: ['Sessions'],
       responses: {
         200: {
           description: '删除成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                success: z.boolean().meta({ description: '操作是否成功' }),
+              })),
+            },
+          },
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
@@ -222,17 +219,34 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.rename',
       summary: '重命名会话',
+      description: '修改会话名称',
       tags: ['Sessions'],
       responses: {
         200: {
           description: '重命名成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                success: z.boolean().meta({ description: '操作是否成功' }),
+              })),
+            },
+          },
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', RenameSessionRequestSchema),
+    validator('json', z.object({
+      name: z.string().meta({ description: '新会话名称' }),
+    })),
     (c) => {
       const id = c.req.param('id');
       const { name } = c.req.valid('json');
@@ -253,17 +267,35 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.messages.add',
       summary: '添加消息到会话',
+      description: '向指定会话添加一条消息',
       tags: ['Messages'],
       responses: {
         200: {
           description: '添加成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                success: z.boolean().meta({ description: '操作是否成功' }),
+              })),
+            },
+          },
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', AddMessageRequestSchema),
+    validator('json', z.object({
+      role: z.enum(['user', 'assistant', 'system']).meta({ description: '消息角色' }),
+      content: z.string().meta({ description: '消息内容' }),
+    })),
     (c) => {
       const id = c.req.param('id');
       const body = c.req.valid('json');
@@ -295,20 +327,49 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.chat',
       summary: '会话聊天',
+      description: '在指定会话中进行聊天，返回 AI 响应',
       tags: ['Chat'],
       responses: {
         200: {
           description: '聊天响应',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                response: z.string().meta({ description: 'AI 响应' }),
+                usage: z.object({
+                  promptTokens: z.number().meta({ description: '输入 token 数' }),
+                  completionTokens: z.number().meta({ description: '输出 token 数' }),
+                  totalTokens: z.number().meta({ description: '总 token 数' }),
+                }).optional().meta({ description: 'Token 使用情况' }),
+              })),
+            },
+          },
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
         500: {
           description: '服务器错误',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', ChatRequestSchema),
+    validator('json', z.object({
+      message: z.string().meta({ description: '用户消息' }),
+    })),
     async (c) => {
       const id = c.req.param('id');
       const { message } = c.req.valid('json');
@@ -371,6 +432,7 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'sessions.chat.stream',
       summary: '会话流式聊天',
+      description: '在指定会话中进行流式聊天，实时返回 AI 响应',
       tags: ['Chat'],
       responses: {
         200: {
@@ -378,10 +440,19 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
         },
         404: {
           description: '会话不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', ChatRequestSchema),
+    validator('json', z.object({
+      message: z.string().meta({ description: '用户消息' }),
+    })),
     async (c) => {
       const id = c.req.param('id');
       const { message } = c.req.valid('json');
@@ -461,17 +532,39 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'chat.send',
       summary: '无会话聊天',
+      description: '直接发送消息进行聊天，不需要会话',
       tags: ['Chat'],
       responses: {
         200: {
           description: '聊天响应',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                response: z.string().meta({ description: 'AI 响应' }),
+                usage: z.object({
+                  promptTokens: z.number().meta({ description: '输入 token 数' }),
+                  completionTokens: z.number().meta({ description: '输出 token 数' }),
+                  totalTokens: z.number().meta({ description: '总 token 数' }),
+                }).optional().meta({ description: 'Token 使用情况' }),
+              })),
+            },
+          },
         },
         500: {
           description: '服务器错误',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', ChatWithoutSessionRequestSchema),
+    validator('json', z.object({
+      messages: z.array(MessageSchema).meta({ description: '消息历史' }),
+    })),
     async (c) => {
       const { messages } = c.req.valid('json');
 
@@ -496,6 +589,7 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     describeRoute({
       operationId: 'chat.stream',
       summary: '无会话流式聊天',
+      description: '直接发送消息进行流式聊天，不需要会话',
       tags: ['Chat'],
       responses: {
         200: {
@@ -503,10 +597,19 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
         },
         500: {
           description: '服务器错误',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
         },
       },
     }),
-    zValidator('json', ChatWithoutSessionRequestSchema),
+    validator('json', z.object({
+      messages: z.array(MessageSchema).meta({ description: '消息历史' }),
+    })),
     async (c) => {
       const { messages } = c.req.valid('json');
 
