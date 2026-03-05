@@ -1,12 +1,6 @@
-# AI 开发规范文档
-
-## 项目概述
-
-**little thing** 是一个通用型 LLM Agent 平台，支持多客户端（CLI/Web）和可扩展的工具系统。
+# 前端开发规范
 
 ## 技术栈
-
-### Web 前端 (packages/web)
 
 | 技术 | 版本 | 用途 |
 |------|------|------|
@@ -19,50 +13,7 @@
 | React Router | ^6.22.0 | 路由管理 |
 | Lucide React | ^0.576.0 | 图标库 |
 
-### 后端 (packages/server)
-
-| 技术 | 用途 |
-|------|------|
-| Bun | Runtime |
-| Hono | HTTP 框架 |
-| WebSocket | 实时通信 |
-
-### CLI (packages/cli)
-
-| 技术 | 用途 |
-|------|------|
-| Bun | Runtime |
-| readline | 交互式输入 |
-
-## 代码风格规范
-
-### 命名约定
-
-```typescript
-// 组件：PascalCase
-export function ChatInput() {}
-export function MessageBubble() {}
-
-// 文件名：PascalCase for components
-// ChatInput.tsx, MessageBubble.tsx
-
-// 工具函数：camelCase
-export function formatDate() {}
-export function cn() {}
-
-// 常量：UPPER_SNAKE_CASE
-export const API_BASE_URL = '...';
-
-// 类型/接口：PascalCase
-interface ChatMessage {}
-type SessionId = string;
-
-// Store：xxxStore
-export const useSessionStore = create<SessionStore>()(...)
-export const useConfigStore = create<ConfigStore>()(...)
-```
-
-### 组件结构
+## 组件结构
 
 ```typescript
 // 1. 导入顺序：外部 → 内部 → 类型
@@ -101,7 +52,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 }
 ```
 
-### 样式规范
+## 样式规范
 
 使用 Tailwind CSS + shadcn/ui 主题变量：
 
@@ -121,7 +72,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 </div>
 ```
 
-### cn 工具函数使用
+## cn 工具函数使用
 
 ```typescript
 import { cn } from '@/lib/utils';
@@ -229,49 +180,6 @@ function ChatPage() {
 }
 ```
 
-## API 规范
-
-### API 客户端
-
-```typescript
-// src/api/client.ts
-const API_BASE = '/api';
-
-export async function sendMessage(sessionId: string, content: string) {
-  const response = await fetch(`${API_BASE}/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, content }),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
-  }
-  
-  return response.json();
-}
-```
-
-### 类型定义
-
-```typescript
-// src/api/types.ts
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-}
-
-export interface Session {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
 ## 文件结构规范
 
 ```
@@ -317,60 +225,10 @@ packages/web/src/
 // 使用
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useSessionStore } from '@/store/sessionStore';
 ```
-
-## Git 提交规范
-
-```
-feat: 新功能
-fix: 修复 bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 重构
-perf: 性能优化
-test: 测试相关
-chore: 构建/工具相关
-
-示例:
-feat(web): add dark mode support
-fix(server): handle streaming timeout
-docs: update API documentation
-```
-
-## 错误处理
-
-```typescript
-// API 错误处理
-try {
-  const result = await sendMessage(sessionId, content);
-} catch (error) {
-  if (error instanceof Error) {
-    console.error('Failed to send message:', error.message);
-  }
-}
-
-// 组件错误边界
-import { ErrorBoundary } from 'react-error-boundary';
-
-<ErrorBoundary fallback={<div>Something went wrong</div>}>
-  <ChatPage />
-</ErrorBoundary>
-```
-
-## 性能优化
 
 1. **使用 React.memo 避免不必要的重渲染**
 2. **使用 Zustand 选择器优化状态订阅**
 3. **虚拟列表处理大量消息**
 4. **懒加载页面组件**
 
-```typescript
-// 懒加载
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-
-// 选择器优化
-const messages = useSessionStore((state) => 
-  state.sessions.find(s => s.id === state.currentSessionId)?.messages ?? []
-);
-```
