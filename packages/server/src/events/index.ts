@@ -5,4 +5,3 @@
 
 export * from './types.js';
 export * from './bus.js';
-export * from './sse.js';

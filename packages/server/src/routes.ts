@@ -6,12 +6,13 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { describeRoute, validator, resolver } from 'hono-openapi';
+import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { SessionStore } from './session/store.js';
 import type { Message } from './session/types.js';
-import { setupSSE, broadcastEvent } from './events/index.js';
-import { EventType, createEvent } from './events/index.js';
+import { eventBus } from './events/bus.js';
+import type { Event } from './events/types.js';
 
 const SessionSchema = z.object({
   id: z.string().meta({ description: '会话 ID' }),
@@ -39,9 +40,43 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     credentials: true,
   }));
 
-  setupSSE(app);
+  app.get('/events', async (c) => {
 
-  app.get('/health', 
+
+    return streamSSE(c, async (stream) => {
+      await stream.writeSSE({
+        event: 'connected',
+        data: JSON.stringify({ timestamp: new Date().toISOString() }),
+      });
+
+      const unsubscribe = eventBus.subscribeAll(async (event: Event) => {
+        await stream.writeSSE({
+          event: event.type,
+          data: JSON.stringify(event),
+        });
+      });
+
+      // Send heartbeat every 10s to prevent stalled proxy streams.
+      const heartbeat = setInterval(() => {
+        stream.writeSSE({
+          data: JSON.stringify({
+            type: "server.heartbeat",
+            properties: {},
+          }),
+        })
+      }, 10_000)
+
+      await new Promise<void>((resolve) => {
+        stream.onAbort(() => {
+          clearInterval(heartbeat)
+          unsubscribe()
+          resolve()
+        })
+      })
+    })
+  });
+
+  app.get('/health',
     describeRoute({
       operationId: 'health.check',
       summary: '健康检查',
@@ -116,17 +151,6 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     (c) => {
       const body = c.req.valid('json');
       const session = sessionStore.createSession(body.name);
-      
-      broadcastEvent(createEvent(
-        EventType.SESSION_CREATED,
-        {
-          sessionId: session.id,
-          name: session.name,
-          createdAt: session.createdAt,
-        },
-        session.id
-      ));
-      
       return c.json({ session }, 201);
     }
   );
@@ -204,11 +228,6 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     (c) => {
       const id = c.req.param('id');
       if (sessionStore.deleteSession(id)) {
-        broadcastEvent(createEvent(
-          EventType.SESSION_DELETED,
-          { sessionId: id },
-          id
-        ));
         return c.json({ success: true });
       }
       return c.json({ error: 'Session not found' }, 404);
@@ -250,13 +269,8 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     (c) => {
       const id = c.req.param('id');
       const { name } = c.req.valid('json');
-      
+
       if (sessionStore.renameSession(id, name)) {
-        broadcastEvent(createEvent(
-          EventType.SESSION_UPDATED,
-          { sessionId: id, name, updatedAt: new Date().toISOString() },
-          id
-        ));
         return c.json({ success: true });
       }
       return c.json({ error: 'Session not found' }, 404);
@@ -299,24 +313,14 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     (c) => {
       const id = c.req.param('id');
       const body = c.req.valid('json');
-      
+
       const message: Message = {
         role: body.role,
         content: body.content,
         timestamp: new Date().toISOString(),
       };
-      
+
       if (sessionStore.addMessage(id, message)) {
-        broadcastEvent(createEvent(
-          EventType.MESSAGE_RECEIVED,
-          {
-            sessionId: id,
-            role: body.role,
-            content: body.content,
-            timestamp: message.timestamp,
-          },
-          id
-        ));
         return c.json({ success: true });
       }
       return c.json({ error: 'Session not found' }, 404);
@@ -404,19 +408,6 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
       };
       sessionStore.addMessage(id, assistantMessage);
 
-      broadcastEvent(createEvent(
-        EventType.CHAT_COMPLETE,
-        {
-          sessionId: id,
-          content: response.content,
-          usage: response.usage ? {
-            input_tokens: response.usage.input_tokens,
-            output_tokens: response.usage.output_tokens,
-          } : undefined,
-        },
-        id
-      ));
-
       return c.json({
         response: response.content,
         usage: response.usage ? {
@@ -485,12 +476,6 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
             for await (const chunk of provider.streamChat(currentSession.messages)) {
               controller.enqueue(new TextEncoder().encode(chunk));
               fullResponse += chunk;
-              
-              broadcastEvent(createEvent(
-                EventType.CHAT_STREAM,
-                { sessionId: id, delta: chunk, done: false },
-                id
-              ));
             }
 
             const assistantMessage: Message = {
@@ -499,18 +484,6 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
               timestamp: new Date().toISOString(),
             };
             sessionStore.addMessage(id, assistantMessage);
-
-            broadcastEvent(createEvent(
-              EventType.CHAT_STREAM,
-              { sessionId: id, delta: '', done: true },
-              id
-            ));
-
-            broadcastEvent(createEvent(
-              EventType.CHAT_COMPLETE,
-              { sessionId: id, content: fullResponse },
-              id
-            ));
 
             controller.close();
           } catch (error) {

@@ -6,8 +6,7 @@ import { ChatInput } from '@/components/ChatInput';
 import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
-import { useOnEvent, useServerEvent } from '@/hooks/useServerEvent';
-import { EventType } from '@littlething/sdk';
+import { useServerEvent } from '@/hooks/useServerEvent';
 
 export function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -24,30 +23,6 @@ export function ChatPage() {
   const setActiveSession = useSessionStore((state) => state.setActiveSession);
   const sendMessage = useSessionStore((state) => state.sendMessage);
   const clearError = useSessionStore((state) => state.clearError);
-  const addSession = useSessionStore((state) => state.addSession);
-  const removeSession = useSessionStore((state) => state.removeSession);
-  const updateSession = useSessionStore((state) => state.updateSession);
-
-  useOnEvent(EventType.SESSION_CREATED, (payload) => {
-    const newSession = {
-      id: payload.sessionId,
-      name: payload.name,
-      createdAt: payload.createdAt,
-      updatedAt: payload.createdAt,
-      messageCount: 0,
-    };
-    addSession(newSession);
-  });
-
-  useOnEvent(EventType.SESSION_DELETED, (payload) => {
-    removeSession(payload.sessionId);
-  });
-
-  useOnEvent(EventType.SESSION_UPDATED, (payload) => {
-    if (payload.name) {
-      updateSession(payload.sessionId, { name: payload.name });
-    }
-  });
 
   useEffect(() => {
     if (status === 'connected') {

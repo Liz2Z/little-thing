@@ -12,3 +12,4 @@
 
 - 优先 'hono' 搭配 'hono-openapi' 构建 API 服务
 - 绝对不要手动修改 @littlething/sdk 中的代码
+- SSE 用于实时事件推送，全局唯一，为公共服务，绝对不要为了某个需求修改
