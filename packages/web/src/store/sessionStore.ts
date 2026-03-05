@@ -17,6 +17,9 @@ interface SessionState {
   fetchSessionMessages: (id: string) => Promise<void>;
   sendMessage: (content: string) => AsyncGenerator<string>;
   clearError: () => void;
+  addSession: (session: Session) => void;
+  removeSession: (id: string) => void;
+  updateSession: (id: string, updates: Partial<Session>) => void;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -174,7 +177,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         return { activeSessionMessages: messages };
       });
 
-      get().fetchSessions();
       yield fullResponse;
     } catch (error) {
       set({
@@ -185,4 +187,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  addSession: (session: Session) => {
+    set((state) => ({
+      sessions: [...state.sessions, session],
+    }));
+  },
+
+  removeSession: (id: string) => {
+    set((state) => ({
+      sessions: state.sessions.filter((s) => s.id !== id),
+      activeSessionId: state.activeSessionId === id ? null : state.activeSessionId,
+    }));
+  },
+
+  updateSession: (id: string, updates: Partial<Session>) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === id ? { ...s, ...updates } : s
+      ),
+    }));
+  },
 }));

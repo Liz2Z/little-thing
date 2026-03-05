@@ -6,39 +6,60 @@ import { ChatInput } from '@/components/ChatInput';
 import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { useOnEvent, useServerEvent } from '@/hooks/useServerEvent';
+import { EventType } from '@littlething/sdk';
 
 export function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const { status } = useServerEvent();
 
-  const {
-    sessions,
-    activeSessionId,
-    activeSessionMessages,
-    isLoading,
-    error,
-    fetchSessions,
-    createSession,
-    setActiveSession,
-    sendMessage,
-    clearError,
-  } = useSessionStore();
+  const sessions = useSessionStore((state) => state.sessions);
+  const activeSessionId = useSessionStore((state) => state.activeSessionId);
+  const activeSessionMessages = useSessionStore((state) => state.activeSessionMessages);
+  const isLoading = useSessionStore((state) => state.isLoading);
+  const error = useSessionStore((state) => state.error);
+  const fetchSessions = useSessionStore((state) => state.fetchSessions);
+  const createSession = useSessionStore((state) => state.createSession);
+  const setActiveSession = useSessionStore((state) => state.setActiveSession);
+  const sendMessage = useSessionStore((state) => state.sendMessage);
+  const clearError = useSessionStore((state) => state.clearError);
+  const addSession = useSessionStore((state) => state.addSession);
+  const removeSession = useSessionStore((state) => state.removeSession);
+  const updateSession = useSessionStore((state) => state.updateSession);
 
-  useEffect(() => {
-    const initialize = async () => {
-      if (hasInitialized) return;
-      await fetchSessions();
-      setHasInitialized(true);
+  useOnEvent(EventType.SESSION_CREATED, (payload) => {
+    const newSession = {
+      id: payload.sessionId,
+      name: payload.name,
+      createdAt: payload.createdAt,
+      updatedAt: payload.createdAt,
+      messageCount: 0,
     };
-    initialize();
-  }, [hasInitialized, fetchSessions]);
+    addSession(newSession);
+  });
+
+  useOnEvent(EventType.SESSION_DELETED, (payload) => {
+    removeSession(payload.sessionId);
+  });
+
+  useOnEvent(EventType.SESSION_UPDATED, (payload) => {
+    if (payload.name) {
+      updateSession(payload.sessionId, { name: payload.name });
+    }
+  });
 
   useEffect(() => {
-    if (hasInitialized && !isLoading && sessions.length === 0) {
+    if (status === 'connected') {
+      fetchSessions();
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === 'connected' && !isLoading && sessions.length === 0) {
       handleCreateSession();
     }
-  }, [hasInitialized, isLoading, sessions.length]);
+  }, [status, isLoading, sessions.length]);
 
   const handleCreateSession = async () => {
     try {
@@ -74,7 +95,6 @@ export function ChatPage() {
 
   return (
     <div className="h-screen bg-background overflow-hidden">
-      {/* 移动端遮罩 */}
       {showSessions && (
         <div
           className="fixed inset-0 bg-stone-900/10 z-20 sm:hidden"
@@ -83,7 +103,6 @@ export function ChatPage() {
       )}
 
       <div className="h-full flex overflow-hidden">
-        {/* 侧边栏 */}
         <aside
           className={`${
             showSessions ? 'translate-x-0' : '-translate-x-full'
@@ -97,11 +116,9 @@ export function ChatPage() {
           </div>
         </aside>
 
-        {/* 主内容区 */}
         <main className="flex-1 flex flex-col min-w-0 h-full p-4 pl-2 sm:pl-4 overflow-hidden">
           {activeSessionId ? (
             <div className="h-full flex flex-col bg-card rounded-xl border border-stone-200/60 overflow-hidden">
-              {/* 头部 - 移除新会话按钮 */}
               <header className="flex-shrink-0 px-5 py-3.5 border-b border-stone-100">
                 <div className="flex items-center gap-3">
                   <Button
@@ -123,18 +140,14 @@ export function ChatPage() {
                 </div>
               </header>
 
-              {/* 消息区域 - 可滚动 */}
               <div className="flex-1 overflow-hidden">
                 <MessageList messages={activeSessionMessages} />
               </div>
 
-              {/* 加载状态 */}
               {isStreaming && <Loading />}
 
-              {/* 输入区域 */}
               <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
 
-              {/* 错误提示 */}
               {error && (
                 <div className="bg-destructive/5 border-t border-destructive/10 px-5 py-2">
                   <p className="text-destructive text-xs">{error}</p>
@@ -142,7 +155,6 @@ export function ChatPage() {
               )}
             </div>
           ) : (
-            /* 空状态 */
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <p className="text-stone-400 text-sm mb-4">选择或创建一个会话开始聊天</p>
