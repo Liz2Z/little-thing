@@ -1,27 +1,30 @@
 import type { Session } from '@/api/types';
 import { cn } from '@/lib/utils';
 import { Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface SessionItemProps {
   session: Session;
   isActive: boolean;
-  onClick: () => void;
   onDelete: (id: string) => void;
+  onClick?: () => void;
 }
 
-export function SessionItem({ session, isActive, onClick, onDelete }: SessionItemProps) {
+export function SessionItem({ session, isActive, onDelete, onClick }: SessionItemProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (confirm(`确定删除会话 "${session.name}" 吗？`)) {
       onDelete(session.id);
     }
   };
 
   return (
-    <div
+    <Link
+      to={`/chat/${session.id}`}
       onClick={onClick}
       className={cn(
-        'group px-3 py-2.5 cursor-pointer transition-all duration-150',
+        'group block px-3 py-2.5 transition-all duration-150',
         'hover:bg-stone-100',
         isActive 
           ? 'bg-primary-50/70 rounded-lg' 
@@ -51,6 +54,6 @@ export function SessionItem({ session, isActive, onClick, onDelete }: SessionIte
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
-    </div>
+    </Link>
   );
 }

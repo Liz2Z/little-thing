@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSessionStore } from '@/store/sessionStore';
 import { SessionList } from '@/components/SessionList';
 import { MessageList } from '@/components/MessageList';
@@ -12,29 +13,20 @@ export function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const { status } = useServerEvent();
+  const navigate = useNavigate();
+  const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
 
   const sessions = useSessionStore((state) => state.sessions);
   const activeSessionId = useSessionStore((state) => state.activeSessionId);
   const activeSessionMessages = useSessionStore((state) => state.activeSessionMessages);
   const isLoading = useSessionStore((state) => state.isLoading);
   const error = useSessionStore((state) => state.error);
-  const fetchSessions = useSessionStore((state) => state.fetchSessions);
+  const initialized = useSessionStore((state) => state.initialized);
+  const initialize = useSessionStore((state) => state.initialize);
   const createSession = useSessionStore((state) => state.createSession);
   const setActiveSession = useSessionStore((state) => state.setActiveSession);
   const sendMessage = useSessionStore((state) => state.sendMessage);
   const clearError = useSessionStore((state) => state.clearError);
-
-  useEffect(() => {
-    if (status === 'connected') {
-      fetchSessions();
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status === 'connected' && !isLoading && sessions.length === 0) {
-      handleCreateSession();
-    }
-  }, [status, isLoading, sessions.length]);
 
   const handleCreateSession = async () => {
     try {
@@ -46,11 +38,31 @@ export function ChatPage() {
           minute: '2-digit',
         })}`
       );
-      setActiveSession(session.id);
+      navigate(`/chat/${session.id}`);
     } catch (error) {
       console.error('Failed to create session:', error);
     }
   };
+
+  useEffect(() => {
+    if (status === 'connected') {
+      initialize();
+    }
+  }, [status, initialize]);
+
+  useEffect(() => {
+    if (!initialized || isLoading || sessions.length === 0) return;
+
+    if (urlSessionId && sessions.some(s => s.id === urlSessionId)) {
+      if (urlSessionId !== activeSessionId) {
+        setActiveSession(urlSessionId);
+      }
+    } else {
+      const firstSessionId = sessions[0].id;
+      setActiveSession(firstSessionId);
+      navigate(`/chat/${firstSessionId}`, { replace: true });
+    }
+  }, [initialized, isLoading, sessions, urlSessionId, activeSessionId, setActiveSession, navigate]);
 
   const handleSendMessage = async (message: string) => {
     if (!activeSessionId || isStreaming) return;

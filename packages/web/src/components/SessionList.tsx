@@ -11,16 +11,10 @@ interface SessionListProps {
 }
 
 export function SessionList({ onCreateSession, onClose }: SessionListProps) {
-  const { sessions, activeSessionId, setActiveSession, deleteSession, isLoading } = useSessionStore();
-
-  const handleSessionClick = (id: string) => {
-    setActiveSession(id);
-    onClose?.();
-  };
+  const { sessions, activeSessionId, deleteSession, isLoading } = useSessionStore();
 
   return (
     <div className="h-full bg-card rounded-xl border border-stone-200/60 flex flex-col overflow-hidden">
-      {/* 简洁头部 */}
       <div className="p-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -40,7 +34,6 @@ export function SessionList({ onCreateSession, onClose }: SessionListProps) {
         </Button>
       </div>
 
-      {/* 会话列表 */}
       {isLoading && sessions.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-stone-300 text-xs">加载中...</p>
@@ -58,7 +51,7 @@ export function SessionList({ onCreateSession, onClose }: SessionListProps) {
                   key={session.id}
                   session={session}
                   isActive={session.id === activeSessionId}
-                  onClick={() => handleSessionClick(session.id)}
+                  onClick={onClose}
                   onDelete={deleteSession}
                 />
               ))}
@@ -67,7 +60,6 @@ export function SessionList({ onCreateSession, onClose }: SessionListProps) {
         </ScrollArea>
       )}
 
-      {/* 底部设置按钮 */}
       <div className="p-3 border-t border-stone-100 flex-shrink-0">
         <Link
           to="/settings"

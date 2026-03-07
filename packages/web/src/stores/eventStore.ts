@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { EventType, type TypedEvent } from '@littlething/sdk';
+import { EventType, type TypedEvent } from '@/lib/event-types';
 
 interface EventState {
   lastEvent: TypedEvent | null;

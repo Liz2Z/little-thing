@@ -4,14 +4,10 @@
  */
 
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { SSEClient, type EventMap } from '@littlething/sdk';
+import { SSEClient, type EventMap } from '@/lib/sse-client';
 import { EventBus } from '@/lib/eventBus';
 
 export type { EventMap };
-
-export interface ServerEventOptions {
-  sessionId?: string;
-}
 
 interface ServerEventContextValue {
   status: 'connected' | 'connecting' | 'disconnected';
@@ -25,7 +21,7 @@ let globalEventBus: EventBus<EventMap> | null = null;
 let globalStatus: 'connected' | 'connecting' | 'disconnected' = 'disconnected';
 let globalStatusListeners: Set<(status: 'connected' | 'connecting' | 'disconnected') => void> = new Set();
 
-function createSSEConnection(options?: ServerEventOptions): { client: SSEClient; eventBus: EventBus<EventMap> } {
+function createSSEConnection(): { client: SSEClient; eventBus: EventBus<EventMap> } {
   if (globalSSEClient && globalEventBus) {
     return { client: globalSSEClient, eventBus: globalEventBus };
   }
@@ -33,7 +29,7 @@ function createSSEConnection(options?: ServerEventOptions): { client: SSEClient;
   const eventBus = new EventBus<EventMap>();
   globalEventBus = eventBus;
 
-  const client = new SSEClient({ sessionId: options?.sessionId });
+  const client = new SSEClient();
   globalSSEClient = client;
   globalStatus = 'connecting';
   globalStatusListeners.forEach(cb => cb(globalStatus));
@@ -56,13 +52,7 @@ function createSSEConnection(options?: ServerEventOptions): { client: SSEClient;
   return { client, eventBus };
 }
 
-export function ServerEventProvider({ 
-  children, 
-  options 
-}: { 
-  children: React.ReactNode; 
-  options?: ServerEventOptions;
-}) {
+export function ServerEventProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<'connected' | 'connecting' | 'disconnected'>(globalStatus);
   const initializedRef = useRef(false);
 
@@ -72,13 +62,13 @@ export function ServerEventProvider({
 
     if (!initializedRef.current) {
       initializedRef.current = true;
-      createSSEConnection(options);
+      createSSEConnection();
     }
 
     return () => {
       globalStatusListeners.delete(setStatus);
     };
-  }, [options?.sessionId]);
+  }, []);
 
   const contextValue: ServerEventContextValue = {
     status,

@@ -9,7 +9,9 @@ interface SessionState {
   activeSessionMessages: Message[];
   isLoading: boolean;
   error: string | null;
+  initialized: boolean;
 
+  initialize: () => Promise<void>;
   fetchSessions: () => Promise<void>;
   createSession: (name?: string) => Promise<Session>;
   deleteSession: (id: string) => Promise<void>;
@@ -28,6 +30,47 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   activeSessionMessages: [],
   isLoading: false,
   error: null,
+  initialized: false,
+
+  initialize: async () => {
+    if (get().initialized) return;
+    
+    set({ isLoading: true, error: null });
+    try {
+      const apiUrl = useConfigStore.getState().apiUrl;
+      const client = new ApiClient(apiUrl);
+      const sessions = await client.getSessions();
+      
+      if (sessions.length === 0) {
+        const newSession = await client.createSession(
+          `会话 ${new Date().toLocaleString('zh-CN', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`
+        );
+        set({
+          sessions: [newSession],
+          activeSessionId: newSession.id,
+          activeSessionMessages: [],
+          isLoading: false,
+          initialized: true,
+        });
+      } else {
+        set({
+          sessions,
+          isLoading: false,
+          initialized: true,
+        });
+      }
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to initialize',
+        isLoading: false,
+      });
+    }
+  },
 
   fetchSessions: async () => {
     set({ isLoading: true, error: null });
