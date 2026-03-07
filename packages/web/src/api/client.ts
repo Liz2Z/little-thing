@@ -1,55 +1,39 @@
-import type { Session, SessionDetail } from './types';
+import { createApiClient, type SessionsGetResponse, type SessionsListResponse, type SessionsCreateResponse } from '@littlething/sdk';
 
 export type { Session, Message, SessionDetail } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:3000';
 
 export class ApiClient {
+  private client: ReturnType<typeof createApiClient>;
   private baseUrl: string;
 
   constructor(baseUrl: string = DEFAULT_BASE_URL) {
     this.baseUrl = baseUrl;
+    this.client = createApiClient({ baseUrl });
   }
 
-  async getSessions(): Promise<Session[]> {
-    const response = await fetch(`${this.baseUrl}/sessions`);
-    if (!response.ok) throw new Error('Failed to fetch sessions');
-    const data = await response.json();
-    return data.sessions;
+  async getSessions(): Promise<SessionsListResponse['sessions']> {
+    const { sessions } = await this.client.sessions.list();
+    return sessions;
   }
 
-  async createSession(name?: string): Promise<Session> {
-    const response = await fetch(`${this.baseUrl}/sessions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    });
-    if (!response.ok) throw new Error('Failed to create session');
-    const data = await response.json();
-    return data.session;
+  async createSession(name?: string): Promise<SessionsCreateResponse['session']> {
+    const { session } = await this.client.sessions.create({ name });
+    return session;
   }
 
-  async getSession(id: string): Promise<SessionDetail> {
-    const response = await fetch(`${this.baseUrl}/sessions/${id}`);
-    if (!response.ok) throw new Error('Failed to fetch session');
-    const data = await response.json();
-    return data.session;
+  async getSession(id: string): Promise<SessionsGetResponse['session']> {
+    const { session } = await this.client.sessions.get(id);
+    return session;
   }
 
   async deleteSession(id: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/sessions/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete session');
+    await this.client.sessions.delete(id);
   }
 
   async renameSession(id: string, name: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/sessions/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    });
-    if (!response.ok) throw new Error('Failed to rename session');
+    await this.client.sessions.rename(id, { name });
   }
 
   async *streamChat(sessionId: string, message: string): AsyncGenerator<string> {

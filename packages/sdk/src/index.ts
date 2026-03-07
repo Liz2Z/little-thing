@@ -1,19 +1,24 @@
 /**
  * SDK 入口
- * 导出事件客户端和类型定义
+ * 导出 API 客户端和类型定义
  */
 
-export * from './events.js';
-export { EventType } from './event-types.js';
-export type { 
-  Event, 
-  SessionCreatedPayload, 
-  SessionDeletedPayload, 
-  SessionUpdatedPayload,
-  MessageReceivedPayload,
-  ChatStreamPayload,
-  ChatCompletePayload,
-  ErrorPayload,
-  EventMap,
-  TypedEvent
-} from './event-types.js';
+export { ApiClient, createApiClient, type ApiClientConfig } from './api-client.js';
+export type {
+  HealthCheckResponse,
+  SessionsListResponse,
+  SessionsCreateRequest,
+  SessionsCreateResponse,
+  SessionsGetResponse,
+  SessionsDeleteResponse,
+  SessionsRenameRequest,
+  SessionsRenameResponse,
+  SessionsMessagesAddRequest,
+  SessionsMessagesAddResponse,
+  SessionsChatSendRequest,
+  SessionsChatSendResponse,
+  SessionsChatStreamRequest,
+  ChatSendRequest,
+  ChatSendResponse,
+  ChatStreamRequest,
+} from './api-types.js';

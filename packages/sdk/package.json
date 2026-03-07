@@ -11,14 +11,10 @@
     }
   },
   "scripts": {
-    "generate": "bun run scripts/generate.ts",
+    "generate": "cd ../server && bun run generate:openapi && cd ../sdk && bun run scripts/generate-sdk.ts",
     "build": "tsc"
   },
-  "dependencies": {
-    "openapi-fetch": "^0.13.0"
-  },
   "devDependencies": {
-    "openapi-typescript": "^7.0.0",
     "@types/bun": "latest",
     "typescript": "^5"
   }

@@ -1,0 +1,918 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent Platform API",
+    "version": "1.0.0",
+    "description": "API for Agent Platform - a chat application with session management and real-time events"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health.check",
+        "summary": "健康检查",
+        "description": "检查服务是否正常运行",
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "服务健康状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "服务状态"
+                    },
+                    "model": {
+                      "type": "string",
+                      "description": "当前使用的模型"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "model"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "get": {
+        "operationId": "sessions.list",
+        "summary": "获取会话列表",
+        "description": "获取所有会话的列表",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "会话列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "会话 ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "会话名称"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "description": "创建时间"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "description": "更新时间"
+                          },
+                          "messageCount": {
+                            "type": "number",
+                            "description": "消息数量"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "createdAt",
+                          "updatedAt",
+                          "messageCount"
+                        ]
+                      },
+                      "description": "会话列表"
+                    }
+                  },
+                  "required": [
+                    "sessions"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "sessions.create",
+        "summary": "创建新会话",
+        "description": "创建一个新的聊天会话",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "201": {
+            "description": "创建的会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "会话 ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "会话名称"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "description": "更新时间"
+                        },
+                        "messageCount": {
+                          "type": "number",
+                          "description": "消息数量"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "createdAt",
+                        "updatedAt",
+                        "messageCount"
+                      ],
+                      "description": "创建的会话"
+                    }
+                  },
+                  "required": [
+                    "session"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "会话名称",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{id}": {
+      "get": {
+        "operationId": "sessions.get",
+        "summary": "获取会话详情",
+        "description": "根据 ID 获取会话的详细信息，包括消息历史",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "会话详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "会话 ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "会话名称"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "description": "更新时间"
+                        },
+                        "messageCount": {
+                          "type": "number",
+                          "description": "消息数量"
+                        },
+                        "messages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "user",
+                                  "assistant",
+                                  "system"
+                                ],
+                                "description": "消息角色"
+                              },
+                              "content": {
+                                "type": "string",
+                                "description": "消息内容"
+                              },
+                              "timestamp": {
+                                "type": "string",
+                                "description": "消息时间"
+                              }
+                            },
+                            "required": [
+                              "role",
+                              "content",
+                              "timestamp"
+                            ]
+                          },
+                          "description": "消息列表"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "createdAt",
+                        "updatedAt",
+                        "messageCount",
+                        "messages"
+                      ],
+                      "description": "会话详情"
+                    }
+                  },
+                  "required": [
+                    "session"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "sessions.delete",
+        "summary": "删除会话",
+        "description": "根据 ID 删除指定会话",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "操作是否成功"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      },
+      "put": {
+        "operationId": "sessions.rename",
+        "summary": "重命名会话",
+        "description": "修改会话名称",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "重命名成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "操作是否成功"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "新会话名称"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/sessions/{id}/messages": {
+      "post": {
+        "operationId": "sessions.messages.add",
+        "summary": "添加消息到会话",
+        "description": "向指定会话添加一条消息",
+        "tags": [
+          "Messages"
+        ],
+        "responses": {
+          "200": {
+            "description": "添加成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "操作是否成功"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "assistant",
+                      "system"
+                    ],
+                    "description": "消息角色"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "消息内容"
+                  }
+                },
+                "required": [
+                  "role",
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/sessions/{id}/chat": {
+      "post": {
+        "operationId": "sessions.chat",
+        "summary": "会话聊天",
+        "description": "在指定会话中进行聊天，返回 AI 响应",
+        "tags": [
+          "Chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "聊天响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "description": "AI 响应"
+                    },
+                    "usage": {
+                      "description": "Token 使用情况",
+                      "type": "object",
+                      "properties": {
+                        "promptTokens": {
+                          "type": "number",
+                          "description": "输入 token 数"
+                        },
+                        "completionTokens": {
+                          "type": "number",
+                          "description": "输出 token 数"
+                        },
+                        "totalTokens": {
+                          "type": "number",
+                          "description": "总 token 数"
+                        }
+                      },
+                      "required": [
+                        "promptTokens",
+                        "completionTokens",
+                        "totalTokens"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "response"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "用户消息"
+                  }
+                },
+                "required": [
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/sessions/{id}/chat/stream": {
+      "post": {
+        "operationId": "sessions.chat.stream",
+        "summary": "会话流式聊天",
+        "description": "在指定会话中进行流式聊天，实时返回 AI 响应",
+        "tags": [
+          "Chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "流式响应"
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "用户消息"
+                  }
+                },
+                "required": [
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/chat": {
+      "post": {
+        "operationId": "chat.send",
+        "summary": "无会话聊天",
+        "description": "直接发送消息进行聊天，不需要会话",
+        "tags": [
+          "Chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "聊天响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "description": "AI 响应"
+                    },
+                    "usage": {
+                      "description": "Token 使用情况",
+                      "type": "object",
+                      "properties": {
+                        "promptTokens": {
+                          "type": "number",
+                          "description": "输入 token 数"
+                        },
+                        "completionTokens": {
+                          "type": "number",
+                          "description": "输出 token 数"
+                        },
+                        "totalTokens": {
+                          "type": "number",
+                          "description": "总 token 数"
+                        }
+                      },
+                      "required": [
+                        "promptTokens",
+                        "completionTokens",
+                        "totalTokens"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "response"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant",
+                            "system"
+                          ],
+                          "description": "消息角色"
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "消息内容"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "description": "消息时间"
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "content",
+                        "timestamp"
+                      ]
+                    },
+                    "description": "消息历史"
+                  }
+                },
+                "required": [
+                  "messages"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/stream": {
+      "post": {
+        "operationId": "chat.stream",
+        "summary": "无会话流式聊天",
+        "description": "直接发送消息进行流式聊天，不需要会话",
+        "tags": [
+          "Chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "流式响应"
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant",
+                            "system"
+                          ],
+                          "description": "消息角色"
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "消息内容"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "description": "消息时间"
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "content",
+                        "timestamp"
+                      ]
+                    },
+                    "description": "消息历史"
+                  }
+                },
+                "required": [
+                  "messages"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ]
+}

@@ -9,7 +9,7 @@
     "dev:cli": "bun run --filter @littlething/cli dev",
     "dev:web": "bun run --filter @littlething/web dev",
     "dev": "bun run dev:server & bun run dev:web",
-    "generate:sdk": "bun run --filter @littlething/sdk generate",
+    "generate:sdk": "cd packages/sdk && bun run generate",
     "build": "bun run --filter '*' build",
     "test": "bun test"
   },

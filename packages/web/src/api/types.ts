@@ -1,19 +1,8 @@
-export interface Session {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-}
+import type { SessionsGetResponse, SessionsListResponse } from '@littlething/sdk';
 
-export interface Message {
-  id?: string;
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-  timestamp: string | number;
-}
-
-export interface SessionDetail {
+export type Session = SessionsListResponse['sessions'][number];
+export type Message = SessionsGetResponse['session']['messages'][number];
+export type SessionDetail = {
   meta: Session;
   messages: Message[];
-}
+};

@@ -329,7 +329,7 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
 
   app.post('/sessions/:id/chat',
     describeRoute({
-      operationId: 'sessions.chat',
+      operationId: 'sessions.chat.send',
       summary: '会话聊天',
       description: '在指定会话中进行聊天，返回 AI 响应',
       tags: ['Chat'],
