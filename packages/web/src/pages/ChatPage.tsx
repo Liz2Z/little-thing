@@ -7,12 +7,10 @@ import { ChatInput } from '@/components/ChatInput';
 import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
-import { useServerEvent } from '@/hooks/useServerEvent';
 
 export function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
-  const { status } = useServerEvent();
   const navigate = useNavigate();
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
 
@@ -45,10 +43,11 @@ export function ChatPage() {
   };
 
   useEffect(() => {
-    if (status === 'connected') {
+    if (!initialized) {
       initialize();
     }
-  }, [status, initialize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized]);
 
   useEffect(() => {
     if (!initialized || isLoading || sessions.length === 0) return;
@@ -62,7 +61,8 @@ export function ChatPage() {
       setActiveSession(firstSessionId);
       navigate(`/chat/${firstSessionId}`, { replace: true });
     }
-  }, [initialized, isLoading, sessions, urlSessionId, activeSessionId, setActiveSession, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, isLoading, urlSessionId]);
 
   const handleSendMessage = async (message: string) => {
     if (!activeSessionId || isStreaming) return;
