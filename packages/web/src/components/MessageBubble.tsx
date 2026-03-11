@@ -1,11 +1,16 @@
 import type { Message } from '@/api/types';
 import { cn } from '@/lib/utils';
+import { Streamdown } from 'streamdown';
+import { code } from '@streamdown/code';
+import { math } from '@streamdown/math';
+
 
 interface MessageBubbleProps {
   message: Message;
+  isStreaming?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -29,7 +34,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : 'bg-card text-foreground rounded-message-assistant border border-stone-200'
         )}
       >
-        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        ) : (
+          <Streamdown
+            plugins={{ code, math }}
+            isAnimating={isStreaming && message.role === 'assistant'}
+          >
+            {message.content}
+          </Streamdown>
+        )}
         <span
           className={cn(
             'text-[10px] mt-2 block tracking-wide',

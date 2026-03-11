@@ -121,6 +121,17 @@
     box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.02);
   }
 
+  /* 去掉代码块边框 */
+  
+  [data-streamdown="code-block-actions"] {
+    border: none !important;
+    margin-right: 1px
+  }
+  
+  /* [data-streamdown="code-block-body"] {
+    border: none !important;
+  } */
+
   /* 消息气泡圆角 */
   .rounded-message-user {
     border-radius: 0.75rem 0.75rem 0.25rem 0.75rem;

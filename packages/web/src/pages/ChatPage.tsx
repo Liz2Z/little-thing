@@ -128,7 +128,7 @@ export function ChatPage() {
               </header>
 
               <div className="flex-1 overflow-hidden">
-                <MessageList messages={activeSessionMessages} />
+                <MessageList messages={activeSessionMessages} isStreaming={isStreaming} />
               </div>
 
               {isStreaming && <Loading />}

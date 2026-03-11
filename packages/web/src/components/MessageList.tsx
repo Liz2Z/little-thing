@@ -5,9 +5,10 @@ import { useEffect, useRef } from 'react';
 
 interface MessageListProps {
   messages: Message[];
+  isStreaming?: boolean;
 }
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({ messages, isStreaming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +30,11 @@ export function MessageList({ messages }: MessageListProps) {
     <ScrollArea className="h-full" ref={scrollRef}>
       <div className="p-5">
         {messages.map((message, index) => (
-          <MessageBubble key={index} message={message} />
+          <MessageBubble 
+            key={index} 
+            message={message} 
+            isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+          />
         ))}
         <div ref={bottomRef} />
       </div>
