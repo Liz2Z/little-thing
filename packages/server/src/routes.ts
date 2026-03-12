@@ -23,6 +23,7 @@ const SessionSchema = z.object({
 });
 
 const MessageSchema = z.object({
+  id: z.string().meta({ description: '消息 ID' }),
   role: z.enum(['user', 'assistant', 'system']).meta({ description: '消息角色' }),
   content: z.string().meta({ description: '消息内容' }),
   timestamp: z.string().meta({ description: '消息时间' }),
@@ -277,6 +278,94 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     }
   );
 
+  app.post('/sessions/:id/fork',
+    describeRoute({
+      operationId: 'sessions.fork',
+      summary: 'Fork 会话',
+      description: '从指定消息的某个位置创建一个新会话，保留该位置之前的所有消息',
+      tags: ['Sessions'],
+      responses: {
+        201: {
+          description: 'Fork 成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                session: SessionSchema.meta({ description: '新创建的会话' }),
+              })),
+            },
+          },
+        },
+        404: {
+          description: '会话或消息不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
+        },
+      },
+    }),
+    validator('json', z.object({
+      messageId: z.string().meta({ description: '消息 ID' }),
+      name: z.string().optional().meta({ description: '新会话名称' }),
+    })),
+    (c) => {
+      const id = c.req.param('id');
+      const { messageId, name } = c.req.valid('json');
+
+      const newSession = sessionStore.forkSession(id, messageId, name);
+      if (newSession) {
+        return c.json({ session: newSession }, 201);
+      }
+      return c.json({ error: 'Session or message not found' }, 404);
+    }
+  );
+
+  app.post('/sessions/:id/resume',
+    describeRoute({
+      operationId: 'sessions.resume',
+      summary: 'Resume 会话',
+      description: '在指定消息位置之后恢复对话，截断该消息之后的所有消息',
+      tags: ['Sessions'],
+      responses: {
+        200: {
+          description: 'Resume 成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                success: z.boolean().meta({ description: '操作是否成功' }),
+              })),
+            },
+          },
+        },
+        404: {
+          description: '会话或消息不存在',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                error: z.string().meta({ description: '错误信息' }),
+              })),
+            },
+          },
+        },
+      },
+    }),
+    validator('json', z.object({
+      messageId: z.string().meta({ description: '消息 ID' }),
+    })),
+    (c) => {
+      const id = c.req.param('id');
+      const { messageId } = c.req.valid('json');
+
+      if (sessionStore.resumeSession(id, messageId)) {
+        return c.json({ success: true });
+      }
+      return c.json({ error: 'Session or message not found' }, 404);
+    }
+  );
+
   app.post('/sessions/:id/messages',
     describeRoute({
       operationId: 'sessions.messages.add',
@@ -309,15 +398,16 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     validator('json', z.object({
       role: z.enum(['user', 'assistant', 'system']).meta({ description: '消息角色' }),
       content: z.string().meta({ description: '消息内容' }),
+      timestamp: z.string().optional().meta({ description: '消息时间' }),
     })),
     (c) => {
       const id = c.req.param('id');
       const body = c.req.valid('json');
 
-      const message: Message = {
+      const message = {
         role: body.role,
         content: body.content,
-        timestamp: new Date().toISOString(),
+        timestamp: body.timestamp || new Date().toISOString(),
       };
 
       if (sessionStore.addMessage(id, message)) {
@@ -387,12 +477,11 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
         return c.json({ error: 'LLM_API_KEY not configured' }, 500);
       }
 
-      const userMessage: Message = {
+      sessionStore.addMessage(id, {
         role: 'user',
         content: message,
         timestamp: new Date().toISOString(),
-      };
-      sessionStore.addMessage(id, userMessage);
+      });
 
       const currentSession = sessionStore.getSession(id);
       if (!currentSession) {
@@ -401,12 +490,11 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
 
       const response = await provider.chat(currentSession.messages);
 
-      const assistantMessage: Message = {
+      sessionStore.addMessage(id, {
         role: 'assistant',
         content: response.content,
         timestamp: new Date().toISOString(),
-      };
-      sessionStore.addMessage(id, assistantMessage);
+      });
 
       return c.json({
         response: response.content,
@@ -457,12 +545,11 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
         return c.json({ error: 'LLM_API_KEY not configured' }, 500);
       }
 
-      const userMessage: Message = {
+      sessionStore.addMessage(id, {
         role: 'user',
         content: message,
         timestamp: new Date().toISOString(),
-      };
-      sessionStore.addMessage(id, userMessage);
+      });
 
       const currentSession = sessionStore.getSession(id);
       if (!currentSession) {
@@ -478,12 +565,11 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
               fullResponse += chunk;
             }
 
-            const assistantMessage: Message = {
+            sessionStore.addMessage(id, {
               role: 'assistant',
               content: fullResponse,
               timestamp: new Date().toISOString(),
-            };
-            sessionStore.addMessage(id, assistantMessage);
+            });
 
             controller.close();
           } catch (error) {

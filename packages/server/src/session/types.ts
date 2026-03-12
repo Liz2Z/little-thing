@@ -1,4 +1,5 @@
 export interface Message {
+  id: string;
   role: 'system' | 'user' | 'assistant';
   content: string;
   timestamp: string;
@@ -11,6 +12,8 @@ export interface SessionMeta {
   updatedAt: string;
   messageCount: number;
   systemPrompt?: string;
+  parentSessionId?: string;
+  forkedFromMessageId?: string;
 }
 
 export interface SessionIndex {

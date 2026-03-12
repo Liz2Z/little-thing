@@ -7,6 +7,10 @@ function generateId(): string {
   return `${date}-${random}`;
 }
 
+function generateMessageId(): string {
+  return `msg_${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export class SessionStore {
   private indexStore: JsonStore<SessionIndex>;
   private messageStores: Map<string, JsonlStore<Message>> = new Map();
@@ -67,12 +71,16 @@ export class SessionStore {
     return meta;
   }
 
-  addMessage(sessionId: string, message: Message): boolean {
+  addMessage(sessionId: string, message: Omit<Message, 'id'>): boolean {
     const index = this.indexStore.load();
     const meta = index.sessions[sessionId];
     if (!meta) return false;
 
-    this.getMessageStore(sessionId).append(message);
+    const messageWithId: Message = {
+      ...message,
+      id: generateMessageId(),
+    };
+    this.getMessageStore(sessionId).append(messageWithId);
 
     meta.messageCount++;
     meta.updatedAt = new Date().toISOString();
@@ -102,6 +110,68 @@ export class SessionStore {
     if (!meta) return false;
 
     meta.name = newName;
+    meta.updatedAt = new Date().toISOString();
+    this.indexStore.save(index);
+
+    return true;
+  }
+
+  forkSession(sourceSessionId: string, messageId: string, name?: string): SessionMeta | null {
+    const sourceSession = this.getSession(sourceSessionId);
+    if (!sourceSession) return null;
+
+    const messageIndex = sourceSession.messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return null;
+
+    const index = this.indexStore.load();
+    const newId = generateId();
+    const now = new Date().toISOString();
+    const forkName = name || `${sourceSession.meta.name} (fork)`;
+
+    const meta: SessionMeta = {
+      id: newId,
+      name: forkName,
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 0,
+      parentSessionId: sourceSessionId,
+      forkedFromMessageId: messageId,
+    };
+
+    index.sessions[newId] = meta;
+    this.indexStore.save(index);
+
+    const messagesToCopy = sourceSession.messages.slice(0, messageIndex + 1);
+    const messageStore = this.getMessageStore(newId);
+    for (const msg of messagesToCopy) {
+      const newMessage: Message = {
+        ...msg,
+        id: generateMessageId(),
+      };
+      messageStore.append(newMessage);
+      meta.messageCount++;
+    }
+
+    this.indexStore.save(index);
+
+    return meta;
+  }
+
+  resumeSession(sessionId: string, messageId: string): boolean {
+    const session = this.getSession(sessionId);
+    if (!session) return false;
+
+    const messageIndex = session.messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return false;
+
+    const index = this.indexStore.load();
+    const meta = index.sessions[sessionId];
+    if (!meta) return false;
+
+    const keepCount = messageIndex + 1;
+    this.getMessageStore(sessionId).truncate(keepCount);
+
+    meta.messageCount = keepCount;
     meta.updatedAt = new Date().toISOString();
     this.indexStore.save(index);
 
