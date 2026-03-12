@@ -36,5 +36,5 @@
     }
   }, [initialized, initialize]);
   ```
-
+- 优先使用 shadcn/ui 提供的组件，而不是直接自己实现相同功能的组件。
 
