@@ -13,6 +13,10 @@ import type {
   SessionsDeleteResponse,
   SessionsRenameRequest,
   SessionsRenameResponse,
+  SessionsForkRequest,
+  SessionsForkResponse,
+  SessionsResumeRequest,
+  SessionsResumeResponse,
   SessionsMessagesAddRequest,
   SessionsMessagesAddResponse,
   SessionsChatSendRequest,
@@ -206,6 +210,42 @@ export class SessionsApi {
     }
 
     return response.json() as Promise<SessionsRenameResponse>;
+  }
+
+  /**
+   * Fork 会话
+   * 从指定消息的某个位置创建一个新会话，保留该位置之前的所有消息
+   */
+  async fork(id: string, body: SessionsForkRequest): Promise<SessionsForkResponse> {
+    const response = await fetch(`${this.baseUrl}/sessions/${id}/fork`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<SessionsForkResponse>;
+  }
+
+  /**
+   * Resume 会话
+   * 在指定消息位置之后恢复对话，截断该消息之后的所有消息
+   */
+  async resume(id: string, body: SessionsResumeRequest): Promise<SessionsResumeResponse> {
+    const response = await fetch(`${this.baseUrl}/sessions/${id}/resume`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<SessionsResumeResponse>;
   }
 
   chat!: SessionsChatApi;

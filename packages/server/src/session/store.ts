@@ -168,7 +168,8 @@ export class SessionStore {
     const meta = index.sessions[sessionId];
     if (!meta) return false;
 
-    const keepCount = messageIndex + 1;
+    // Keep only messages before the target message (exclude the target message)
+    const keepCount = messageIndex;
     this.getMessageStore(sessionId).truncate(keepCount);
 
     meta.messageCount = keepCount;

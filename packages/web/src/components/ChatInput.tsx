@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, CornerDownLeft } from 'lucide-react';
+import { useSessionStore } from '@/store/sessionStore';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -9,8 +10,22 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
-  const [message, setMessage] = useState('');
+  const inputText = useSessionStore((state) => state.inputText);
+  const setInputText = useSessionStore((state) => state.setInputText);
+  const [message, setMessage] = useState(inputText);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync local state with store when inputText changes from outside (e.g., resume)
+  useEffect(() => {
+    setMessage(inputText);
+  }, [inputText]);
+
+  // Clear store when message is sent
+  useEffect(() => {
+    if (message === '' && inputText !== '') {
+      setInputText('');
+    }
+  }, [message, inputText, setInputText]);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -21,6 +36,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (message.trim() && !disabled) {
       onSend(message.trim());
       setMessage('');
+      setInputText('');
     }
   };
 
@@ -31,6 +47,12 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setMessage(newValue);
+    setInputText(newValue);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex-shrink-0 px-4 pb-4 pt-2">
       <div className="max-w-3xl mx-auto">
@@ -38,7 +60,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           <Textarea
             ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="输入消息..."
             disabled={disabled}

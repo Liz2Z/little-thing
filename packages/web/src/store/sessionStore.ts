@@ -3,6 +3,10 @@ import type { Session, Message } from '@/api/types';
 import { ApiClient } from '@/api/client';
 import { useConfigStore } from './configStore';
 
+function generateTempId(): string {
+  return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 interface SessionState {
   sessions: Session[];
   activeSessionId: string | null;
@@ -10,6 +14,7 @@ interface SessionState {
   isLoading: boolean;
   error: string | null;
   initialized: boolean;
+  inputText: string;
 
   initialize: () => Promise<void>;
   fetchSessions: () => Promise<void>;
@@ -22,6 +27,9 @@ interface SessionState {
   addSession: (session: Session) => void;
   removeSession: (id: string) => void;
   updateSession: (id: string, updates: Partial<Session>) => void;
+  setInputText: (text: string) => void;
+  forkSession: (sessionId: string, messageId: string, name?: string) => Promise<Session>;
+  resumeSession: (sessionId: string, messageId: string, messageContent: string) => Promise<void>;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -31,6 +39,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isLoading: false,
   error: null,
   initialized: false,
+  inputText: '',
 
   initialize: async () => {
     if (get().initialized) return;
@@ -160,6 +169,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
 
     const userMessage: Message = {
+      id: generateTempId(),
       role: 'user',
       content,
       timestamp: new Date().toISOString(),
@@ -185,12 +195,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             const messages = [...state.activeSessionMessages];
             if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
               messages[messages.length - 1] = {
-                role: 'assistant',
+                ...messages[messages.length - 1],
                 content: fullResponse,
                 timestamp: new Date().toISOString(),
               };
             } else {
               messages.push({
+                id: generateTempId(),
                 role: 'assistant',
                 content: fullResponse,
                 timestamp: new Date().toISOString(),
@@ -206,12 +217,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         const messages = [...state.activeSessionMessages];
         if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
           messages[messages.length - 1] = {
-            role: 'assistant',
+            ...messages[messages.length - 1],
             content: fullResponse,
             timestamp: new Date().toISOString(),
           };
         } else {
           messages.push({
+            id: generateTempId(),
             role: 'assistant',
             content: fullResponse,
             timestamp: new Date().toISOString(),
@@ -250,5 +262,61 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         s.id === id ? { ...s, ...updates } : s
       ),
     }));
+  },
+
+  setInputText: (text: string) => {
+    set({ inputText: text });
+  },
+
+  forkSession: async (sessionId: string, messageId: string, name?: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const apiUrl = useConfigStore.getState().apiUrl;
+      const client = new ApiClient(apiUrl);
+      const session = await client.forkSession(sessionId, messageId, name);
+      set((state) => ({
+        sessions: [...state.sessions, session],
+        activeSessionId: session.id,
+        isLoading: false,
+      }));
+      await get().fetchSessionMessages(session.id);
+      return session;
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fork session',
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  resumeSession: async (sessionId: string, messageId: string, messageContent: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const apiUrl = useConfigStore.getState().apiUrl;
+      const client = new ApiClient(apiUrl);
+      await client.resumeSession(sessionId, messageId);
+      set((state) => {
+        // Keep only messages before the target message (exclude the target message)
+        const filteredMessages: Message[] = [];
+        for (const m of state.activeSessionMessages) {
+          if (m.id === messageId) {
+            break;
+          }
+          filteredMessages.push(m);
+        }
+        return {
+          activeSessionMessages: filteredMessages,
+          inputText: messageContent,
+          isLoading: false,
+        };
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to resume session',
+        isLoading: false,
+      });
+      throw error;
+    }
   },
 }));

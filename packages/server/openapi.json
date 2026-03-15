@@ -223,6 +223,10 @@
                           "items": {
                             "type": "object",
                             "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "消息 ID"
+                              },
                               "role": {
                                 "type": "string",
                                 "enum": [
@@ -242,6 +246,7 @@
                               }
                             },
                             "required": [
+                              "id",
                               "role",
                               "content",
                               "timestamp"
@@ -435,6 +440,197 @@
         ]
       }
     },
+    "/sessions/{id}/fork": {
+      "post": {
+        "operationId": "sessions.fork",
+        "summary": "Fork 会话",
+        "description": "从指定消息的某个位置创建一个新会话，保留该位置之前的所有消息",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "201": {
+            "description": "Fork 成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "会话 ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "会话名称"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "description": "更新时间"
+                        },
+                        "messageCount": {
+                          "type": "number",
+                          "description": "消息数量"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "createdAt",
+                        "updatedAt",
+                        "messageCount"
+                      ],
+                      "description": "新创建的会话"
+                    }
+                  },
+                  "required": [
+                    "session"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话或消息不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                    "description": "消息 ID"
+                  },
+                  "name": {
+                    "description": "新会话名称",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "messageId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/sessions/{id}/resume": {
+      "post": {
+        "operationId": "sessions.resume",
+        "summary": "Resume 会话",
+        "description": "在指定消息位置之后恢复对话，截断该消息之后的所有消息",
+        "tags": [
+          "Sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resume 成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "操作是否成功"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话或消息不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                    "description": "消息 ID"
+                  }
+                },
+                "required": [
+                  "messageId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
+      }
+    },
     "/sessions/{id}/messages": {
       "post": {
         "operationId": "sessions.messages.add",
@@ -502,6 +698,10 @@
                   "content": {
                     "type": "string",
                     "description": "消息内容"
+                  },
+                  "timestamp": {
+                    "description": "消息时间",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -791,6 +991,10 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "消息 ID"
+                        },
                         "role": {
                           "type": "string",
                           "enum": [
@@ -810,6 +1014,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "role",
                         "content",
                         "timestamp"
@@ -871,6 +1076,10 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "消息 ID"
+                        },
                         "role": {
                           "type": "string",
                           "enum": [
@@ -890,6 +1099,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "role",
                         "content",
                         "timestamp"

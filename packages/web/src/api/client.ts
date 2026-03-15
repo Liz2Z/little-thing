@@ -1,6 +1,7 @@
-import { createApiClient, type SessionsGetResponse, type SessionsListResponse, type SessionsCreateResponse } from '@littlething/sdk';
+import { createApiClient, type SessionsListResponse, type SessionsCreateResponse } from '@littlething/sdk';
+import type { Session, Message } from './types';
 
-export type { Session, Message, SessionDetail } from './types';
+export type { Session, Message } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:3000';
 
@@ -23,9 +24,9 @@ export class ApiClient {
     return session;
   }
 
-  async getSession(id: string): Promise<SessionsGetResponse['session']> {
+  async getSession(id: string): Promise<Session & { messages: Message[] }> {
     const { session } = await this.client.sessions.get(id);
-    return session;
+    return session as unknown as Session & { messages: Message[] };
   }
 
   async deleteSession(id: string): Promise<void> {
@@ -34,6 +35,33 @@ export class ApiClient {
 
   async renameSession(id: string, name: string): Promise<void> {
     await this.client.sessions.rename(id, { name });
+  }
+
+  async forkSession(sessionId: string, messageId: string, name?: string): Promise<SessionsCreateResponse['session']> {
+    const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/fork`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId, name }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Fork failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.session;
+  }
+
+  async resumeSession(sessionId: string, messageId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resume failed: ${response.status}`);
+    }
   }
 
   async *streamChat(sessionId: string, message: string): AsyncGenerator<string> {

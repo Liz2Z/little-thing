@@ -63,6 +63,8 @@ export interface SessionsGetResponse {
     messageCount: number;
     /** 消息列表 */
     messages: Array<{
+      /** 消息 ID */
+      id: string;
       /** 消息角色 */
       role: 'user' | 'assistant' | 'system';
       /** 消息内容 */
@@ -88,11 +90,46 @@ export interface SessionsRenameResponse {
   success: boolean;
 }
 
+export interface SessionsForkRequest {
+  /** 消息 ID */
+  messageId: string;
+  /** 新会话名称 */
+  name?: string;
+}
+
+export interface SessionsForkResponse {
+  /** 新创建的会话 */
+  session: {
+    /** 会话 ID */
+    id: string;
+    /** 会话名称 */
+    name: string;
+    /** 创建时间 */
+    createdAt: string;
+    /** 更新时间 */
+    updatedAt: string;
+    /** 消息数量 */
+    messageCount: number;
+  };
+}
+
+export interface SessionsResumeRequest {
+  /** 消息 ID */
+  messageId: string;
+}
+
+export interface SessionsResumeResponse {
+  /** 操作是否成功 */
+  success: boolean;
+}
+
 export interface SessionsMessagesAddRequest {
   /** 消息角色 */
   role: 'user' | 'assistant' | 'system';
   /** 消息内容 */
   content: string;
+  /** 消息时间 */
+  timestamp?: string;
 }
 
 export interface SessionsMessagesAddResponse {
@@ -127,6 +164,8 @@ export interface SessionsChatStreamRequest {
 export interface ChatSendRequest {
   /** 消息历史 */
   messages: Array<{
+    /** 消息 ID */
+    id: string;
     /** 消息角色 */
     role: 'user' | 'assistant' | 'system';
     /** 消息内容 */
@@ -153,6 +192,8 @@ export interface ChatSendResponse {
 export interface ChatStreamRequest {
   /** 消息历史 */
   messages: Array<{
+    /** 消息 ID */
+    id: string;
     /** 消息角色 */
     role: 'user' | 'assistant' | 'system';
     /** 消息内容 */
