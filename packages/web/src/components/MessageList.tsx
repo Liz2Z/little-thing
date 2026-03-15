@@ -1,5 +1,7 @@
-import type { Message } from '@/api/types';
+import type { SessionsGetResponse } from '@littlething/sdk';
 import { MessageBubble } from './MessageBubble';
+
+type Message = SessionsGetResponse['session']['messages'][number];
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEffect, useRef } from 'react';
 

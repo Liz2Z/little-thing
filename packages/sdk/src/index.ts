@@ -1,6 +1,7 @@
 /**
  * SDK 入口
  * 导出 API 客户端和类型定义
+ * 自动生成，请勿手动修改
  */
 
 export { ApiClient, createApiClient, type ApiClientConfig } from './api-client.js';
@@ -13,6 +14,10 @@ export type {
   SessionsDeleteResponse,
   SessionsRenameRequest,
   SessionsRenameResponse,
+  SessionsForkRequest,
+  SessionsForkResponse,
+  SessionsResumeRequest,
+  SessionsResumeResponse,
   SessionsMessagesAddRequest,
   SessionsMessagesAddResponse,
   SessionsChatSendRequest,

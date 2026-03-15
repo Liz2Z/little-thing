@@ -249,6 +249,32 @@ function generateTypes(routes: RouteInfo[]): string {
   return code;
 }
 
+function generateIndex(routes: RouteInfo[]): string {
+  const typeExports: string[] = [];
+
+  for (const route of routes) {
+    const typeName = toPascalCase(route.operationId);
+    if (route.requestBody) {
+      typeExports.push(`  ${typeName}Request,`);
+    }
+    if (route.responseBody) {
+      typeExports.push(`  ${typeName}Response,`);
+    }
+  }
+
+  return `/**
+ * SDK 入口
+ * 导出 API 客户端和类型定义
+ * 自动生成，请勿手动修改
+ */
+
+export { ApiClient, createApiClient, type ApiClientConfig } from './api-client.js';
+export type {
+${typeExports.join('\n')}
+} from './api-types.js';
+`;
+}
+
 function generateSDK(routes: RouteInfo[]): string {
   const tree = buildNamespaceTree(routes);
   const sortedNamespaces = Array.from(tree.keys()).sort();
@@ -420,6 +446,10 @@ function main() {
   const sdkCode = generateSDK(routes);
   writeFileSync(SDK_FILE, sdkCode);
   console.log('SDK 已生成:', SDK_FILE);
+
+  const indexCode = generateIndex(routes);
+  writeFileSync(join(OUTPUT_DIR, 'index.ts'), indexCode);
+  console.log('索引文件已生成:', join(OUTPUT_DIR, 'index.ts'));
 
   console.log('\n生成的 API 命名空间:');
   for (const route of routes) {

@@ -1,7 +1,10 @@
 import { create } from 'zustand';
-import type { Session, Message } from '@/api/types';
-import { ApiClient } from '@/api/client';
+import { createApiClient, type SessionsListResponse, type SessionsGetResponse } from '@littlething/sdk';
 import { useConfigStore } from './configStore';
+
+// 从 SDK 响应中提取的类型
+type Session = SessionsListResponse['sessions'][number];
+type Message = SessionsGetResponse['session']['messages'][number];
 
 function generateTempId(): string {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -47,18 +50,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      const sessions = await client.getSessions();
+      const client = createApiClient({ baseUrl: apiUrl });
+      const { sessions } = await client.sessions.list();
       
       if (sessions.length === 0) {
-        const newSession = await client.createSession(
-          `会话 ${new Date().toLocaleString('zh-CN', {
+        const { session: newSession } = await client.sessions.create({
+          name: `会话 ${new Date().toLocaleString('zh-CN', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
           })}`
-        );
+        });
         set({
           sessions: [newSession],
           activeSessionId: newSession.id,
@@ -85,8 +88,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      const sessions = await client.getSessions();
+      const client = createApiClient({ baseUrl: apiUrl });
+      const { sessions } = await client.sessions.list();
       set({ sessions, isLoading: false });
     } catch (error) {
       set({
@@ -100,8 +103,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      const session = await client.createSession(name);
+      const client = createApiClient({ baseUrl: apiUrl });
+      const { session } = await client.sessions.create({ name });
       set((state) => ({
         sessions: [...state.sessions, session],
         isLoading: false,
@@ -120,8 +123,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      await client.deleteSession(id);
+      const client = createApiClient({ baseUrl: apiUrl });
+      await client.sessions.delete(id);
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== id),
         activeSessionId: state.activeSessionId === id ? null : state.activeSessionId,
@@ -148,8 +151,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      const session = await client.getSession(id);
+      const client = createApiClient({ baseUrl: apiUrl });
+      const { session } = await client.sessions.get(id);
       set({
         activeSessionMessages: session.messages,
         isLoading: false,
@@ -180,37 +183,61 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
 
       let fullResponse = '';
       let lastUpdateTime = 0;
       const UPDATE_INTERVAL = 100;
 
-      for await (const chunk of client.streamChat(activeSessionId, content)) {
-        fullResponse += chunk;
-        
-        const now = Date.now();
-        if (now - lastUpdateTime >= UPDATE_INTERVAL) {
-          set((state) => {
-            const messages = [...state.activeSessionMessages];
-            if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-              messages[messages.length - 1] = {
-                ...messages[messages.length - 1],
-                content: fullResponse,
-                timestamp: new Date().toISOString(),
-              };
-            } else {
-              messages.push({
-                id: generateTempId(),
-                role: 'assistant',
-                content: fullResponse,
-                timestamp: new Date().toISOString(),
-              });
-            }
-            return { activeSessionMessages: messages };
-          });
-          lastUpdateTime = now;
+      const response = await fetch(`${apiUrl}/sessions/${activeSessionId}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat failed: ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullResponse += chunk;
+          
+          const now = Date.now();
+          if (now - lastUpdateTime >= UPDATE_INTERVAL) {
+            set((state) => {
+              const messages = [...state.activeSessionMessages];
+              if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+                messages[messages.length - 1] = {
+                  ...messages[messages.length - 1],
+                  content: fullResponse,
+                  timestamp: new Date().toISOString(),
+                };
+              } else {
+                messages.push({
+                  id: generateTempId(),
+                  role: 'assistant',
+                  content: fullResponse,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+              return { activeSessionMessages: messages };
+            });
+            lastUpdateTime = now;
+          }
+          yield chunk;
         }
+      } finally {
+        reader.releaseLock();
       }
 
       set((state) => {
@@ -272,8 +299,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      const session = await client.forkSession(sessionId, messageId, name);
+      const client = createApiClient({ baseUrl: apiUrl });
+      const { session } = await client.sessions.fork(sessionId, { messageId, name });
       set((state) => ({
         sessions: [...state.sessions, session],
         activeSessionId: session.id,
@@ -294,8 +321,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
-      const client = new ApiClient(apiUrl);
-      await client.resumeSession(sessionId, messageId);
+      const client = createApiClient({ baseUrl: apiUrl });
+      await client.sessions.resume(sessionId, { messageId });
       set((state) => {
         // Keep only messages before the target message (exclude the target message)
         const filteredMessages: Message[] = [];
