@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { ls } from './ls.js';
+import { createLsTool } from './ls.js';
+import { getTextContent } from './types.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
 import { join } from 'path';
 
 describe('ls tool', () => {
   const testDir = join(import.meta.dir, '__test_ls__');
+  const lsTool = createLsTool(testDir);
 
   beforeEach(async () => {
     await mkdir(testDir, { recursive: true });
@@ -19,31 +21,37 @@ describe('ls tool', () => {
   });
 
   it('should list files and directories', async () => {
-    const result = await ls({ path: testDir });
-    expect(result.success).toBe(true);
-    expect(result.output).toContain('file1.txt');
-    expect(result.output).toContain('file2.ts');
-    expect(result.output).toContain('subdir');
+    const result = await lsTool.execute('test-id', { path: '.' });
+    const text = getTextContent(result);
+    expect(text).toContain('file1.txt');
+    expect(text).toContain('file2.ts');
+    expect(text).toContain('subdir/');
   });
 
   it('should return error for non-existent path', async () => {
-    const result = await ls({ path: '/non/existent/path' });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('does not exist');
+    try {
+      await lsTool.execute('test-id', { path: '/non/existent/path' });
+      expect(true).toBe(false);
+    } catch (error: any) {
+      expect(error.message).toContain('not found');
+    }
   });
 
   it('should return error for file path instead of directory', async () => {
-    const result = await ls({ path: join(testDir, 'file1.txt') });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('not a directory');
+    try {
+      await lsTool.execute('test-id', { path: 'file1.txt' });
+      expect(true).toBe(false);
+    } catch (error: any) {
+      expect(error.message).toContain('Not a directory');
+    }
   });
 
   it('should format output with correct structure', async () => {
-    const result = await ls({ path: testDir });
-    expect(result.success).toBe(true);
-    const lines = result.output!.split('\n');
+    const result = await lsTool.execute('test-id', { path: '.' });
+    const text = getTextContent(result);
+    const lines = text.split('\n');
     expect(lines.length).toBeGreaterThan(0);
-    expect(lines.some(line => line.includes('file1.txt'))).toBe(true);
-    expect(lines.some(line => line.includes('subdir') && line.startsWith('-'))).toBe(true);
+    expect(lines.some((line: string) => line.includes('file1.txt'))).toBe(true);
+    expect(lines.some((line: string) => line.includes('subdir/'))).toBe(true);
   });
 });

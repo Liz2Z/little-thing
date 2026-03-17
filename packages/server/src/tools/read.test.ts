@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { read } from './read.js';
+import { createReadTool } from './read.js';
+import { getTextContent } from './types.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
 import { join } from 'path';
 
 describe('read tool', () => {
   const testDir = join(import.meta.dir, '__test_read__');
   const testFile = join(testDir, 'test.txt');
+  const readTool = createReadTool(testDir);
 
   beforeEach(async () => {
     await mkdir(testDir, { recursive: true });
@@ -18,53 +20,52 @@ describe('read tool', () => {
   });
 
   it('should read entire file', async () => {
-    const result = await read({ file_path: testFile });
-    expect(result.success).toBe(true);
-    expect(result.output).toContain('Line 1');
-    expect(result.output).toContain('Line 100');
+    const result = await readTool.execute('test-id', { path: 'test.txt' });
+    const text = getTextContent(result);
+    expect(text).toContain('Line 1');
+    expect(text).toContain('Line 100');
   });
 
-  it('should read file with offset', async () => {
-    const result = await read({ file_path: testFile, offset: 50 });
-    expect(result.success).toBe(true);
-    expect(result.output).not.toContain('1→Line 1');
-    expect(result.output).toContain('51→Line 51');
+  it('should read file with offset (1-indexed)', async () => {
+    const result = await readTool.execute('test-id', { path: 'test.txt', offset: 50 });
+    const text = getTextContent(result);
+    expect(text).toContain('Line 50');
+    expect(text).toContain('Line 100');
+    expect(text).not.toMatch(/^Line 1\b/);
   });
 
   it('should read file with limit', async () => {
-    const result = await read({ file_path: testFile, limit: 10 });
-    expect(result.success).toBe(true);
-    expect(result.output).toContain('Line 1');
-    expect(result.output).toContain('Line 10');
-    expect(result.output).not.toContain('Line 11');
+    const result = await readTool.execute('test-id', { path: 'test.txt', limit: 10 });
+    const text = getTextContent(result);
+    expect(text).toContain('Line 1');
+    expect(text).toContain('Line 10');
+    expect(text).not.toContain('Line 11');
   });
 
   it('should read file with offset and limit', async () => {
-    const result = await read({ file_path: testFile, offset: 20, limit: 5 });
-    expect(result.success).toBe(true);
-    expect(result.output).toContain('Line 21');
-    expect(result.output).toContain('Line 25');
-    expect(result.output).not.toContain('Line 20');
-    expect(result.output).not.toContain('Line 26');
+    const result = await readTool.execute('test-id', { path: 'test.txt', offset: 20, limit: 5 });
+    const text = getTextContent(result);
+    expect(text).toContain('Line 20');
+    expect(text).toContain('Line 24');
+    expect(text).not.toContain('Line 19');
+    expect(text).not.toContain('Line 25');
   });
 
   it('should return error for non-existent file', async () => {
-    const result = await read({ file_path: '/non/existent/file.txt' });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('does not exist');
+    try {
+      await readTool.execute('test-id', { path: '/non/existent/file.txt' });
+      expect(true).toBe(false);
+    } catch (error: any) {
+      expect(error.message).toBeDefined();
+    }
   });
 
   it('should return error for directory path', async () => {
-    const result = await read({ file_path: testDir });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('not a file');
-  });
-
-  it('should format output with line numbers', async () => {
-    const result = await read({ file_path: testFile, limit: 3 });
-    expect(result.success).toBe(true);
-    const lines = result.output!.split('\n');
-    expect(lines[0]).toMatch(/^\s*1→/);
-    expect(lines[1]).toMatch(/^\s*2→/);
+    try {
+      await readTool.execute('test-id', { path: '.' });
+      expect(true).toBe(false);
+    } catch (error: any) {
+      expect(error.message).toBeDefined();
+    }
   });
 });

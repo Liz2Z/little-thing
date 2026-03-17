@@ -1,55 +1,52 @@
+import type { Static, TSchema } from '@sinclair/typebox';
+
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
+export interface ImageContent {
+  type: 'image';
+  data: string;
+  mimeType: string;
+}
+
+export interface ToolExecutionResult<TDetails = any> {
+  content: (TextContent | ImageContent)[];
+  details?: TDetails;
+}
+
+export interface ToolDefinition<TParameters extends TSchema = TSchema, TDetails = any> {
+  name: string;
+  label: string;
+  description: string;
+  parameters: TParameters;
+  execute: (
+    toolCallId: string,
+    params: Static<TParameters>,
+    signal?: AbortSignal,
+  ) => Promise<ToolExecutionResult<TDetails>>;
+}
+
+export interface AnyTool {
+  name: string;
+  label: string;
+  description: string;
+  parameters: TSchema;
+  execute: (
+    toolCallId: string,
+    params: any,
+    signal?: AbortSignal,
+  ) => Promise<ToolExecutionResult<any>>;
+}
+
 export type ToolName = 'ls' | 'read' | 'edit' | 'write' | 'grep';
 
-export interface ToolParameter {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-  description: string;
-  required?: boolean;
-  enum?: string[];
-  items?: ToolParameter;
-  properties?: Record<string, ToolParameter>;
+export function isTextContent(content: TextContent | ImageContent): content is TextContent {
+  return content.type === 'text';
 }
 
-export interface ToolDefinition {
-  name: ToolName;
-  description: string;
-  parameters: Record<string, ToolParameter>;
+export function getTextContent(result: ToolExecutionResult): string {
+  const textContent = result.content.find(isTextContent);
+  return textContent?.text ?? '';
 }
-
-export interface ToolResult {
-  success: boolean;
-  output?: string;
-  error?: string;
-}
-
-export interface LsParams {
-  path: string;
-}
-
-export interface ReadParams {
-  file_path: string;
-  offset?: number;
-  limit?: number;
-}
-
-export interface EditParams {
-  file_path: string;
-  old_str: string;
-  new_str: string;
-}
-
-export interface WriteParams {
-  file_path: string;
-  content: string;
-}
-
-export interface GrepParams {
-  pattern: string;
-  path?: string;
-  glob?: string;
-  output_mode?: 'files_with_matches' | 'content' | 'count';
-  '-i'?: boolean;
-  '-n'?: boolean;
-  '-C'?: number;
-}
-
-export type ToolParams = LsParams | ReadParams | EditParams | WriteParams | GrepParams;

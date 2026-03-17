@@ -1,36 +1,101 @@
-import { stat, writeFile, mkdir } from 'fs/promises';
+import { type Static, Type } from '@sinclair/typebox';
+import { mkdir as fsMkdir, writeFile as fsWriteFile } from 'fs/promises';
 import { dirname } from 'path';
-import type { ToolResult, WriteParams } from './types.js';
+import type { ToolDefinition } from './types.js';
+import { resolveToCwd } from './path-utils.js';
 
-export async function write(params: WriteParams): Promise<ToolResult> {
-  try {
-    try {
-      const stats = await stat(params.file_path);
-      if (stats.isDirectory()) {
-        return {
-          success: false,
-          error: `Error: ${params.file_path} is a directory`,
-        };
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
+const writeSchema = Type.Object({
+  path: Type.String({ description: 'Path to the file to write (relative or absolute)' }),
+  content: Type.String({ description: 'Content to write to the file' }),
+});
 
-    const dir = dirname(params.file_path);
-    await mkdir(dir, { recursive: true });
+export type WriteToolInput = Static<typeof writeSchema>;
 
-    await writeFile(params.file_path, params.content, 'utf-8');
-
-    return {
-      success: true,
-      output: `Successfully wrote to ${params.file_path}`,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Error: ${error}`,
-    };
-  }
+export interface WriteOperations {
+  writeFile: (absolutePath: string, content: string) => Promise<void>;
+  mkdir: (dir: string) => Promise<void>;
 }
+
+const defaultWriteOperations: WriteOperations = {
+  writeFile: (path, content) => fsWriteFile(path, content, 'utf-8'),
+  mkdir: (dir) => fsMkdir(dir, { recursive: true }).then(() => {}),
+};
+
+export interface WriteToolOptions {
+  operations?: WriteOperations;
+}
+
+export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition<typeof writeSchema> {
+  const ops = options?.operations ?? defaultWriteOperations;
+
+  return {
+    name: 'write',
+    label: 'write',
+    description:
+      'Write content to a file. Creates the file if it doesn\'t exist, overwrites if it does. Automatically creates parent directories.',
+    parameters: writeSchema,
+    execute: async (
+      _toolCallId: string,
+      { path, content }: { path: string; content: string },
+      signal?: AbortSignal,
+    ) => {
+      const absolutePath = resolveToCwd(path, cwd);
+      const dir = dirname(absolutePath);
+
+      return new Promise<{ content: Array<{ type: 'text'; text: string }>; details: undefined }>(
+        (resolve, reject) => {
+          if (signal?.aborted) {
+            reject(new Error('Operation aborted'));
+            return;
+          }
+
+          let aborted = false;
+
+          const onAbort = () => {
+            aborted = true;
+            reject(new Error('Operation aborted'));
+          };
+
+          if (signal) {
+            signal.addEventListener('abort', onAbort, { once: true });
+          }
+
+          (async () => {
+            try {
+              await ops.mkdir(dir);
+
+              if (aborted) {
+                return;
+              }
+
+              await ops.writeFile(absolutePath, content);
+
+              if (aborted) {
+                return;
+              }
+
+              if (signal) {
+                signal.removeEventListener('abort', onAbort);
+              }
+
+              resolve({
+                content: [{ type: 'text', text: `Successfully wrote ${content.length} bytes to ${path}` }],
+                details: undefined,
+              });
+            } catch (error: any) {
+              if (signal) {
+                signal.removeEventListener('abort', onAbort);
+              }
+
+              if (!aborted) {
+                reject(error);
+              }
+            }
+          })();
+        },
+      );
+    },
+  };
+}
+
+export const writeTool = createWriteTool(process.cwd());
