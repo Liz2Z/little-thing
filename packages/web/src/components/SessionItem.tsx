@@ -1,7 +1,5 @@
-import type { SessionsListResponse } from '@littlething/sdk';
+import { type Session } from '@/store/sessionStore';
 import { cn } from '@/lib/utils';
-
-type Session = SessionsListResponse['sessions'][number];
 import { Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

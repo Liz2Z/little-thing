@@ -1,0 +1,12 @@
+[2026-03-17T02:25:40.026Z] Error: this.handler is not a function
+Stack:
+TypeError: this.handler is not a function
+    at PluginInstance.run (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+shared@0.2.4/node_modules/@hey-api/shared/dist/index.mjs:2040:14)
+    at generateOutput (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/src-CdNoenvJ.mjs:29:63)
+    at async createClient$1 (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/src-CdNoenvJ.mjs:134:3)
+    at async file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/src-CdNoenvJ.mjs:194:12
+    at async Promise.all (index 0)
+    at async createClient (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/src-CdNoenvJ.mjs:192:21)
+    at async Command.<anonymous> (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/run.mjs:39:8)
+    at async Command.parseAsync (/Users/lishuang/workDir/little-thing/node_modules/.bun/commander@14.0.3/node_modules/commander/lib/command.js:1122:5)
+    at async runCli (file:///Users/lishuang/workDir/little-thing/node_modules/.bun/@hey-api+openapi-ts@0.94.2+1fb4c65d43e298b9/node_modules/@hey-api/openapi-ts/dist/run.mjs:43:3)

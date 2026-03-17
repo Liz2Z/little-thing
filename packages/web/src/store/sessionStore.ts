@@ -1,8 +1,16 @@
 import { create } from 'zustand';
-import { createApiClient, type SessionsListResponse, type SessionsGetResponse } from '@littlething/sdk';
+import {
+  sessionsList,
+  sessionsCreate,
+  sessionsDelete,
+  sessionsGet,
+  sessionsFork,
+  sessionsResume,
+  type SessionsListResponse,
+  type SessionsGetResponse,
+} from '@littlething/sdk';
 import { useConfigStore } from './configStore';
 
-// 从 SDK 响应中提取的类型
 type Session = SessionsListResponse['sessions'][number];
 type Message = SessionsGetResponse['session']['messages'][number];
 
@@ -46,29 +54,35 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   initialize: async () => {
     if (get().initialized) return;
-    
+
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      const { sessions } = await client.sessions.list();
-      
+      const baseUrl = useConfigStore.getState().apiUrl;
+      const response = await sessionsList({ baseUrl });
+      const sessions = response.data?.sessions ?? [];
+
       if (sessions.length === 0) {
-        const { session: newSession } = await client.sessions.create({
-          name: `会话 ${new Date().toLocaleString('zh-CN', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}`
+        const createResponse = await sessionsCreate({
+          baseUrl,
+          body: {
+            name: `会话 ${new Date().toLocaleString('zh-CN', {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}`
+          }
         });
-        set({
-          sessions: [newSession],
-          activeSessionId: newSession.id,
-          activeSessionMessages: [],
-          isLoading: false,
-          initialized: true,
-        });
+        const newSession = createResponse.data?.session;
+        if (newSession) {
+          set({
+            sessions: [newSession],
+            activeSessionId: newSession.id,
+            activeSessionMessages: [],
+            isLoading: false,
+            initialized: true,
+          });
+        }
       } else {
         set({
           sessions,
@@ -87,9 +101,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   fetchSessions: async () => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      const { sessions } = await client.sessions.list();
+      const baseUrl = useConfigStore.getState().apiUrl;
+      const response = await sessionsList({ baseUrl });
+      const sessions = response.data?.sessions ?? [];
       set({ sessions, isLoading: false });
     } catch (error) {
       set({
@@ -102,9 +116,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   createSession: async (name) => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      const { session } = await client.sessions.create({ name });
+      const baseUrl = useConfigStore.getState().apiUrl;
+      const response = await sessionsCreate({
+        baseUrl,
+        body: { name }
+      });
+      const session = response.data?.session;
+      if (!session) {
+        throw new Error('Failed to create session: no session returned');
+      }
       set((state) => ({
         sessions: [...state.sessions, session],
         isLoading: false,
@@ -122,9 +142,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   deleteSession: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      await client.sessions.delete(id);
+      const baseUrl = useConfigStore.getState().apiUrl;
+      await sessionsDelete({
+        baseUrl,
+        path: { id }
+      });
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== id),
         activeSessionId: state.activeSessionId === id ? null : state.activeSessionId,
@@ -150,11 +172,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   fetchSessionMessages: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      const { session } = await client.sessions.get(id);
+      const baseUrl = useConfigStore.getState().apiUrl;
+      const response = await sessionsGet({
+        baseUrl,
+        path: { id }
+      });
+      const session = response.data?.session;
       set({
-        activeSessionMessages: session.messages,
+        activeSessionMessages: session?.messages ?? [],
         isLoading: false,
       });
     } catch (error) {
@@ -211,7 +236,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
           fullResponse += chunk;
-          
+
           const now = Date.now();
           if (now - lastUpdateTime >= UPDATE_INTERVAL) {
             set((state) => {
@@ -298,9 +323,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   forkSession: async (sessionId: string, messageId: string, name?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      const { session } = await client.sessions.fork(sessionId, { messageId, name });
+      const baseUrl = useConfigStore.getState().apiUrl;
+      const response = await sessionsFork({
+        baseUrl,
+        path: { id: sessionId },
+        body: { messageId, name }
+      });
+      const session = response.data?.session;
+      if (!session) {
+        throw new Error('Failed to fork session: no session returned');
+      }
       set((state) => ({
         sessions: [...state.sessions, session],
         activeSessionId: session.id,
@@ -320,11 +352,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   resumeSession: async (sessionId: string, messageId: string, messageContent: string) => {
     set({ isLoading: true, error: null });
     try {
-      const apiUrl = useConfigStore.getState().apiUrl;
-      const client = createApiClient({ baseUrl: apiUrl });
-      await client.sessions.resume(sessionId, { messageId });
+      const baseUrl = useConfigStore.getState().apiUrl;
+      await sessionsResume({
+        baseUrl,
+        path: { id: sessionId },
+        body: { messageId }
+      });
       set((state) => {
-        // Keep only messages before the target message (exclude the target message)
         const filteredMessages: Message[] = [];
         for (const m of state.activeSessionMessages) {
           if (m.id === messageId) {
@@ -347,3 +381,5 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 }));
+
+export type { Session, Message };

@@ -1,7 +1,5 @@
-import type { SessionsGetResponse } from '@littlething/sdk';
+import { type Message } from '@/store/sessionStore';
 import { cn } from '@/lib/utils';
-
-type Message = SessionsGetResponse['session']['messages'][number];
 import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
 import { math } from '@streamdown/math';

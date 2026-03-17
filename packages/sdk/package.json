@@ -11,10 +11,11 @@
     }
   },
   "scripts": {
-    "generate": "cd ../server && bun run generate:openapi && cd ../sdk && bun run scripts/generate-sdk.ts",
+    "generate": "cd ../server && bun run generate:openapi && cd ../sdk && openapi-ts",
     "build": "tsc"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.94.2",
     "@types/bun": "latest",
     "typescript": "^5"
   }
