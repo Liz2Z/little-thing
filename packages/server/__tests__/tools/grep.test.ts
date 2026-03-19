@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createGrepTool } from './grep.js';
-import { getTextContent } from './types.js';
+import { createGrepTool } from '../../src/tools/grep.js';
+import { getTextContent } from '../../src/tools/types.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const hasRipgrep = (() => {
   try {
@@ -15,7 +19,7 @@ const hasRipgrep = (() => {
 })();
 
 describe.skipIf(!hasRipgrep)('grep tool', () => {
-  const testDir = join(import.meta.dir, '__test_grep__');
+  const testDir = join(__dirname, '__test_grep__');
   const grepTool = createGrepTool(testDir);
 
   beforeEach(async () => {

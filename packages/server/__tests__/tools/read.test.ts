@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createReadTool } from './read.js';
-import { getTextContent } from './types.js';
+import { createReadTool } from '../../src/tools/read.js';
+import { getTextContent } from '../../src/tools/types.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('read tool', () => {
-  const testDir = join(import.meta.dir, '__test_read__');
+  const testDir = join(__dirname, '__test_read__');
   const testFile = join(testDir, 'test.txt');
   const readTool = createReadTool(testDir);
 

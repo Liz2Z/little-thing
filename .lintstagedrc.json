@@ -1,0 +1,6 @@
+{
+  "*.{ts,tsx,js,jsx}": [
+    "bunx biome check --write --no-errors-on-unmatched",
+    "bunx biome check --write --no-errors-on-unmatched"
+  ]
+}

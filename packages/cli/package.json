@@ -7,7 +7,9 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "bun test __tests__",
+    "test:watch": "bun test __tests__ --watch"
   },
   "dependencies": {
     "@littlething/sdk": "workspace:*"

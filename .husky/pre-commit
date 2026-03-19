@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 Running tests for changed packages..."
+bunx turbo run test --filter=[HEAD] --concurrency=1

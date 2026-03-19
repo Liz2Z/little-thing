@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createLsTool } from './ls.js';
-import { getTextContent } from './types.js';
+import { createLsTool } from '../../src/tools/ls.js';
+import { getTextContent } from '../../src/tools/types.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('ls tool', () => {
-  const testDir = join(import.meta.dir, '__test_ls__');
+  const testDir = join(__dirname, '__test_ls__');
   const lsTool = createLsTool(testDir);
 
   beforeEach(async () => {

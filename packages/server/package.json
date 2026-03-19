@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "tsc",
-    "generate:openapi": "bun run scripts/generate-openapi.ts"
+    "generate:openapi": "bun run scripts/generate-openapi.ts",
+    "test": "bun test __tests__",
+    "test:coverage": "bun test __tests__ --coverage",
+    "test:watch": "bun test __tests__ --watch"
   },
   "dependencies": {
     "@hono/standard-validator": "^0.2.2",
