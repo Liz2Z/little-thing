@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatSendData, ChatSendErrors, ChatSendResponses, ChatStreamData, ChatStreamErrors, ChatStreamResponses, HealthCheckData, HealthCheckResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsChatStreamData, SessionsChatStreamErrors, SessionsChatStreamResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses } from './types.gen';
+import type { AgentAbortData, AgentAbortResponses, ChatSendData, ChatSendErrors, ChatSendResponses, ChatStreamData, ChatStreamErrors, ChatStreamResponses, HealthCheckData, HealthCheckResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsChatStreamData, SessionsChatStreamErrors, SessionsChatStreamResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -117,11 +117,11 @@ export const sessionsMessagesAdd = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * 会话聊天
+ * Agent 对话
  *
- * 在指定会话中进行聊天，返回 AI 响应
+ * 使用 Agent 模式进行对话，支持工具调用和 ReAct 循环，返回 SSE 事件流
  */
-export const sessionsChatSend = <ThrowOnError extends boolean = false>(options: Options<SessionsChatSendData, ThrowOnError>) => (options.client ?? client).post<SessionsChatSendResponses, SessionsChatSendErrors, ThrowOnError>({
+export const sessionsChatSend = <ThrowOnError extends boolean = false>(options: Options<SessionsChatSendData, ThrowOnError>) => (options.client ?? client).sse.post<SessionsChatSendResponses, SessionsChatSendErrors, ThrowOnError>({
     url: '/sessions/{id}/chat',
     ...options,
     headers: {
@@ -165,6 +165,20 @@ export const chatSend = <ThrowOnError extends boolean = false>(options: Options<
  */
 export const chatStream = <ThrowOnError extends boolean = false>(options: Options<ChatStreamData, ThrowOnError>) => (options.client ?? client).post<ChatStreamResponses, ChatStreamErrors, ThrowOnError>({
     url: '/chat/stream',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 终止 Agent 运行
+ *
+ * 终止当前正在运行的 Agent
+ */
+export const agentAbort = <ThrowOnError extends boolean = false>(options: Options<AgentAbortData, ThrowOnError>) => (options.client ?? client).post<AgentAbortResponses, unknown, ThrowOnError>({
+    url: '/sessions/{id}/agent/abort',
     ...options,
     headers: {
         'Content-Type': 'application/json',

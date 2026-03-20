@@ -8,11 +8,15 @@ import { cors } from 'hono/cors';
 import { describeRoute, validator, resolver } from 'hono-openapi';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { SessionStore } from './session/store.js';
 import type { Message } from './session/types.js';
 import { eventBus } from './events/bus.js';
 import type { Event } from './events/types.js';
+import { createAllTools, ToolRegistry } from './tools/index.js';
+import { Agent } from './agent/agent.js';
+import { AgentEventType, EventStatus, AgentErrorType } from './agent/types.js';
 
 const SessionSchema = z.object({
   id: z.string().meta({ description: '会话 ID' }),
@@ -33,6 +37,14 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
   const app = new Hono();
   const provider = new AnthropicProvider(llmConfig);
   const sessionStore = new SessionStore();
+
+  const toolRegistry = new ToolRegistry();
+  const allTools = createAllTools(process.cwd());
+  for (const tool of Object.values(allTools)) {
+    toolRegistry.register(tool);
+  }
+
+  const agent = new Agent(provider, toolRegistry);
 
   app.use('/*', cors({
     origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
@@ -420,21 +432,17 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
   app.post('/sessions/:id/chat',
     describeRoute({
       operationId: 'sessions.chat.send',
-      summary: '会话聊天',
-      description: '在指定会话中进行聊天，返回 AI 响应',
-      tags: ['Chat'],
+      summary: 'Agent 对话',
+      description: '使用 Agent 模式进行对话，支持工具调用和 ReAct 循环，返回 SSE 事件流',
+      tags: ['Agent'],
       responses: {
         200: {
-          description: '聊天响应',
+          description: 'SSE 事件流',
           content: {
-            'application/json': {
+            'text/event-stream': {
               schema: resolver(z.object({
-                response: z.string().meta({ description: 'AI 响应' }),
-                usage: z.object({
-                  promptTokens: z.number().meta({ description: '输入 token 数' }),
-                  completionTokens: z.number().meta({ description: '输出 token 数' }),
-                  totalTokens: z.number().meta({ description: '总 token 数' }),
-                }).optional().meta({ description: 'Token 使用情况' }),
+                event: z.string().meta({ description: '事件类型' }),
+                data: z.string().meta({ description: '事件数据 JSON' }),
               })),
             },
           },
@@ -463,10 +471,12 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
     }),
     validator('json', z.object({
       message: z.string().meta({ description: '用户消息' }),
+      enabledTools: z.array(z.string()).optional().meta({ description: '启用的工具列表' }),
+      maxIterations: z.number().optional().meta({ description: '最大迭代次数' }),
     })),
     async (c) => {
       const id = c.req.param('id');
-      const { message } = c.req.valid('json');
+      const { message, enabledTools, maxIterations } = c.req.valid('json');
 
       const session = sessionStore.getSession(id);
       if (!session) {
@@ -477,32 +487,46 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
         return c.json({ error: 'LLM_API_KEY not configured' }, 500);
       }
 
-      sessionStore.addMessage(id, {
-        role: 'user',
-        content: message,
-        timestamp: new Date().toISOString(),
-      });
+      return streamSSE(c, async (stream) => {
+        try {
+          for await (const event of agent.run(message, session.messages, {
+            enabledTools,
+            maxIterations,
+          })) {
+            await stream.writeSSE({
+              event: event.type,
+              data: JSON.stringify(event),
+            });
 
-      const currentSession = sessionStore.getSession(id);
-      if (!currentSession) {
-        return c.json({ error: 'Session not found' }, 404);
-      }
-
-      const response = await provider.chat(currentSession.messages);
-
-      sessionStore.addMessage(id, {
-        role: 'assistant',
-        content: response.content,
-        timestamp: new Date().toISOString(),
-      });
-
-      return c.json({
-        response: response.content,
-        usage: response.usage ? {
-          promptTokens: response.usage.input_tokens,
-          completionTokens: response.usage.output_tokens,
-          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-        } : undefined,
+            if (event.type === AgentEventType.Complete || event.type === AgentEventType.Error) {
+              sessionStore.addMessage(id, {
+                id: randomUUID(),
+                role: 'user',
+                content: message,
+                timestamp: new Date().toISOString(),
+              });
+              if (event.type === AgentEventType.Complete) {
+                sessionStore.addMessage(id, {
+                  id: randomUUID(),
+                  role: 'assistant',
+                  content: event.final_content,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            }
+          }
+        } catch (error) {
+          await stream.writeSSE({
+            event: AgentEventType.Error,
+            data: JSON.stringify({
+              type: AgentEventType.Error,
+              status: EventStatus.Failed,
+              error: error instanceof Error ? error.message : 'Unknown error',
+              error_type: AgentErrorType.Unknown,
+              timestamp: new Date().toISOString(),
+            }),
+          });
+        }
       });
     }
   );
@@ -695,6 +719,35 @@ export function createApp(llmConfig: { apiKey: string; baseUrl: string; model: s
           'Access-Control-Allow-Origin': '*',
         },
       });
+    }
+  );
+
+  app.post('/sessions/:id/agent/abort',
+    describeRoute({
+      operationId: 'agent.abort',
+      summary: '终止 Agent 运行',
+      description: '终止当前正在运行的 Agent',
+      tags: ['Agent'],
+      responses: {
+        200: {
+          description: '终止成功',
+          content: {
+            'application/json': {
+              schema: resolver(z.object({
+                success: z.boolean().meta({ description: '是否成功' }),
+              })),
+            },
+          },
+        },
+      },
+    }),
+    validator('json', z.object({
+      run_id: z.string().meta({ description: '要终止的运行 ID' }),
+    })),
+    async (c) => {
+      const { run_id } = c.req.valid('json');
+      agent.abort(run_id);
+      return c.json({ success: true });
     }
   );
 

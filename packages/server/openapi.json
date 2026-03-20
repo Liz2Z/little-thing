@@ -727,49 +727,31 @@
     "/sessions/{id}/chat": {
       "post": {
         "operationId": "sessions.chat.send",
-        "summary": "会话聊天",
-        "description": "在指定会话中进行聊天，返回 AI 响应",
+        "summary": "Agent 对话",
+        "description": "使用 Agent 模式进行对话，支持工具调用和 ReAct 循环，返回 SSE 事件流",
         "tags": [
-          "Chat"
+          "Agent"
         ],
         "responses": {
           "200": {
-            "description": "聊天响应",
+            "description": "SSE 事件流",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "response": {
+                    "event": {
                       "type": "string",
-                      "description": "AI 响应"
+                      "description": "事件类型"
                     },
-                    "usage": {
-                      "description": "Token 使用情况",
-                      "type": "object",
-                      "properties": {
-                        "promptTokens": {
-                          "type": "number",
-                          "description": "输入 token 数"
-                        },
-                        "completionTokens": {
-                          "type": "number",
-                          "description": "输出 token 数"
-                        },
-                        "totalTokens": {
-                          "type": "number",
-                          "description": "总 token 数"
-                        }
-                      },
-                      "required": [
-                        "promptTokens",
-                        "completionTokens",
-                        "totalTokens"
-                      ]
+                    "data": {
+                      "type": "string",
+                      "description": "事件数据 JSON"
                     }
                   },
                   "required": [
-                    "response"
+                    "event",
+                    "data"
                   ]
                 }
               }
@@ -824,6 +806,17 @@
                   "message": {
                     "type": "string",
                     "description": "用户消息"
+                  },
+                  "enabledTools": {
+                    "description": "启用的工具列表",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "maxIterations": {
+                    "description": "最大迭代次数",
+                    "type": "number"
                   }
                 },
                 "required": [
@@ -1115,6 +1108,66 @@
             }
           }
         }
+      }
+    },
+    "/sessions/{id}/agent/abort": {
+      "post": {
+        "operationId": "agent.abort",
+        "summary": "终止 Agent 运行",
+        "description": "终止当前正在运行的 Agent",
+        "tags": [
+          "Agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "终止成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "是否成功"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "run_id": {
+                    "type": "string",
+                    "description": "要终止的运行 ID"
+                  }
+                },
+                "required": [
+                  "run_id"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ]
       }
     }
   },

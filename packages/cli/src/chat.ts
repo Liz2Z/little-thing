@@ -1,8 +1,9 @@
 import * as readline from 'readline';
-import { ApiClient, type Session } from './api.js';
+import { ApiClient, type Session, type AgentEvent, type ToolUseEvent } from './api.js';
 import type { CliConfig } from './config.js';
 
 let activeSessionId: string | null = null;
+let currentRunId: string | null = null;
 
 export async function startInteractiveChat(config: CliConfig) {
   const client = new ApiClient(config);
@@ -34,7 +35,7 @@ export async function startInteractiveChat(config: CliConfig) {
 
   console.log(`\n🤖 little thing - ${session.name}\n`);
   console.log('Type your message and press Enter.');
-  console.log('Commands: /new, /list, /switch, /delete, /rename, /clear, /quit\n');
+  console.log('Commands: /new, /list, /switch, /delete, /rename, /clear, /abort, /quit\n');
 
   if (session.messages.length > 0) {
     console.log('--- 历史消息 ---');
@@ -62,7 +63,6 @@ export async function startInteractiveChat(config: CliConfig) {
         return;
       }
 
-      // 处理命令
       if (trimmed.startsWith('/')) {
         handleCommand(trimmed, client, config).then((handled) => {
           if (handled === 'quit') {
@@ -75,21 +75,21 @@ export async function startInteractiveChat(config: CliConfig) {
         return;
       }
 
-      // 发送消息
       (async () => {
         try {
-          console.log(`[DEBUG] activeSessionId: ${activeSessionId}`);
           if (!activeSessionId) {
             console.log('No active session');
             askQuestion();
             return;
           }
 
-          console.log(`[DEBUG] Calling chatInSession with: ${trimmed}`);
-          // 使用非流式 API (暂时)
-          const response = await client.chatInSession(activeSessionId, trimmed);
-          console.log(`[DEBUG] Got response: ${response.substring(0, 50)}...`);
-          console.log(`AI: ${response}`);
+          process.stdout.write('AI: ');
+
+          for await (const event of client.agentChat(activeSessionId, trimmed)) {
+            renderEvent(event);
+          }
+
+          console.log('');
         } catch (error) {
           console.error('\n✗ Error:', error instanceof Error ? error.message : 'Unknown error');
         }
@@ -100,6 +100,55 @@ export async function startInteractiveChat(config: CliConfig) {
   };
 
   askQuestion();
+}
+
+function renderEvent(event: AgentEvent) {
+  switch (event.type) {
+    case 'agent_start':
+      currentRunId = event.run_id;
+      break;
+
+    case 'agent_thinking':
+      process.stdout.write(`\r💭 ${event.content.slice(0, 50)}${event.content.length > 50 ? '...' : ''}\n`);
+      break;
+
+    case 'tool_use':
+      renderToolUse(event);
+      break;
+
+    case 'agent_content':
+      process.stdout.write(`\r${event.content}`);
+      break;
+
+    case 'agent_complete':
+      currentRunId = null;
+      break;
+
+    case 'agent_error':
+      console.log(`\n❌ Error: ${event.error}`);
+      currentRunId = null;
+      break;
+
+    case 'agent_abort':
+      console.log(`\n🛑 Aborted: ${event.reason}`);
+      currentRunId = null;
+      break;
+  }
+}
+
+function renderToolUse(event: ToolUseEvent) {
+  if (event.status === 'start') {
+    process.stdout.write(`\n🔧 ${event.tool_name}...`);
+  } else if (event.status === 'completed') {
+    process.stdout.write(` ✓ (${event.duration_ms}ms)\n`);
+    if (event.result) {
+      const preview = event.result.slice(0, 100);
+      process.stdout.write(`   ${preview}${event.result.length > 100 ? '...' : ''}\n`);
+    }
+  } else if (event.status === 'failed') {
+    process.stdout.write(` ✗\n`);
+    process.stdout.write(`   Error: ${event.error}\n`);
+  }
 }
 
 async function handleCommand(
@@ -119,6 +168,20 @@ async function handleCommand(
     case '/clear':
       console.clear();
       return 'continue';
+
+    case '/abort': {
+      if (!activeSessionId || !currentRunId) {
+        console.log('No active agent run to abort');
+        return 'continue';
+      }
+      const success = await client.abortAgent(activeSessionId, currentRunId);
+      if (success) {
+        console.log('✓ Agent aborted');
+      } else {
+        console.log('✗ Failed to abort agent');
+      }
+      return 'continue';
+    }
 
     case '/new': {
       const name = args.join(' ') || undefined;
@@ -221,6 +284,7 @@ async function handleCommand(
       console.log('  /delete <id>   - Delete session');
       console.log('  /rename <name> - Rename current session');
       console.log('  /clear         - Clear screen');
+      console.log('  /abort         - Abort current agent run');
       console.log('  /quit, /exit   - Exit');
       console.log('');
       return 'continue';

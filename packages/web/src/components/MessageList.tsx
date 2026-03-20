@@ -1,5 +1,6 @@
 import type { SessionsGetResponse } from '@littlething/sdk';
 import { MessageBubble } from './MessageBubble';
+import { AgentStatus } from './AgentStatus';
 
 type Message = SessionsGetResponse['session']['messages'][number];
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,24 +23,30 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
 
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-stone-400 text-sm">开始新对话...</p>
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-stone-400 text-sm">开始新对话...</p>
+        </div>
+        <AgentStatus />
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-full" ref={scrollRef}>
-      <div className="p-5">
-        {messages.map((message, index) => (
-          <MessageBubble 
-            key={index} 
-            message={message} 
-            isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
-          />
-        ))}
-        <div ref={bottomRef} />
-      </div>
-    </ScrollArea>
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="p-5">
+          {messages.map((message, index) => (
+            <MessageBubble 
+              key={index} 
+              message={message} 
+              isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+            />
+          ))}
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
+      <AgentStatus />
+    </div>
   );
 }

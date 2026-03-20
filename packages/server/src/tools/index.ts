@@ -81,7 +81,9 @@ export type {
   ImageContent,
 } from './types.js';
 
-export { isTextContent, getTextContent } from './types.js';
+export { isTextContent, getTextContent, toolToProviderFormat } from './types.js';
+
+export { ToolRegistry } from './registry.js';
 
 import type { AnyTool } from './types.js';
 import { createLsTool, lsTool } from './ls.js';

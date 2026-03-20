@@ -4,12 +4,10 @@ import { useSessionStore } from '@/store/sessionStore';
 import { SessionList } from '@/components/SessionList';
 import { MessageList } from '@/components/MessageList';
 import { ChatInput } from '@/components/ChatInput';
-import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 
 export function ChatPage() {
-  const [isStreaming, setIsStreaming] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const navigate = useNavigate();
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
@@ -25,6 +23,7 @@ export function ChatPage() {
   const setActiveSession = useSessionStore((state) => state.setActiveSession);
   const sendMessage = useSessionStore((state) => state.sendMessage);
   const clearError = useSessionStore((state) => state.clearError);
+  const isAgentRunning = useSessionStore((state) => state.isAgentRunning);
 
   const handleCreateSession = async () => {
     try {
@@ -65,16 +64,12 @@ export function ChatPage() {
   }, [initialized, isLoading, urlSessionId]);
 
   const handleSendMessage = async (message: string) => {
-    if (!activeSessionId || isStreaming) return;
-    setIsStreaming(true);
+    if (!activeSessionId || isAgentRunning) return;
     clearError();
     try {
-      for await (const _chunk of sendMessage(message)) {
-      }
+      await sendMessage(message);
     } catch (error) {
       console.error('Failed to send message:', error);
-    } finally {
-      setIsStreaming(false);
     }
   };
 
@@ -128,12 +123,10 @@ export function ChatPage() {
               </header>
 
               <div className="flex-1 overflow-hidden">
-                <MessageList messages={activeSessionMessages} isStreaming={isStreaming} />
+                <MessageList messages={activeSessionMessages} isStreaming={isAgentRunning} />
               </div>
 
-              {isStreaming && <Loading />}
-
-              <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
+              <ChatInput onSend={handleSendMessage} disabled={isAgentRunning} />
 
               {error && (
                 <div className="bg-destructive/5 border-t border-destructive/10 px-5 py-2">

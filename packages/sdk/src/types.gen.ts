@@ -441,6 +441,14 @@ export type SessionsChatSendData = {
          * 用户消息
          */
         message: string;
+        /**
+         * 启用的工具列表
+         */
+        enabledTools?: Array<string>;
+        /**
+         * 最大迭代次数
+         */
+        maxIterations?: number;
     };
     path: {
         id: string;
@@ -474,30 +482,17 @@ export type SessionsChatSendError = SessionsChatSendErrors[keyof SessionsChatSen
 
 export type SessionsChatSendResponses = {
     /**
-     * 聊天响应
+     * SSE 事件流
      */
     200: {
         /**
-         * AI 响应
+         * 事件类型
          */
-        response: string;
+        event: string;
         /**
-         * Token 使用情况
+         * 事件数据 JSON
          */
-        usage?: {
-            /**
-             * 输入 token 数
-             */
-            promptTokens: number;
-            /**
-             * 输出 token 数
-             */
-            completionTokens: number;
-            /**
-             * 总 token 数
-             */
-            totalTokens: number;
-        };
+        data: string;
     };
 };
 
@@ -661,3 +656,31 @@ export type ChatStreamResponses = {
      */
     200: unknown;
 };
+
+export type AgentAbortData = {
+    body: {
+        /**
+         * 要终止的运行 ID
+         */
+        run_id: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/sessions/{id}/agent/abort';
+};
+
+export type AgentAbortResponses = {
+    /**
+     * 终止成功
+     */
+    200: {
+        /**
+         * 是否成功
+         */
+        success: boolean;
+    };
+};
+
+export type AgentAbortResponse = AgentAbortResponses[keyof AgentAbortResponses];
