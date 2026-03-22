@@ -1,20 +1,22 @@
-import { createApp } from './routes.js';
+import { cors } from 'hono/cors';
+import { Hono } from 'hono';
+import { sessionRoutes, systemRoutes } from './routes';
 
-const llmConfig = {
-  apiKey: process.env.LLM_API_KEY || '',
-  baseUrl: `${process.env.LLM_BASE_URL}/v1` || 'https://api.moonshot.cn/v1',
-  model: process.env.LLM_MODEL || 'glm-4.7',
-};
+const app = new Hono();
 
-const app = createApp(llmConfig);
+app.use('/*', cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}))
+  .route('/sessions', sessionRoutes)
+  .route('/system', systemRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-export default {
-  port: PORT,
-  fetch: app.fetch,
-};
-
 console.log(`Server running on http://localhost:${PORT}`);
 console.log(`OpenAPI spec available at http://localhost:${PORT}/openapi.json`);
-console.log(`Using model: ${llmConfig.model}`);
+
+
+export { app };

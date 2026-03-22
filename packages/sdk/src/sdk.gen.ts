@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AgentAbortData, AgentAbortResponses, ChatSendData, ChatSendErrors, ChatSendResponses, ChatStreamData, ChatStreamErrors, ChatStreamResponses, HealthCheckData, HealthCheckResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsChatStreamData, SessionsChatStreamErrors, SessionsChatStreamResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses } from './types.gen';
+import type { AgentAbortData, AgentAbortResponses, HealthCheckData, HealthCheckResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -17,13 +17,6 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: Record<string, unknown>;
 };
-
-/**
- * 健康检查
- *
- * 检查服务是否正常运行
- */
-export const healthCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthCheckData, ThrowOnError>) => (options?.client ?? client).get<HealthCheckResponses, unknown, ThrowOnError>({ url: '/health', ...options });
 
 /**
  * 获取会话列表
@@ -131,48 +124,6 @@ export const sessionsChatSend = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * 会话流式聊天
- *
- * 在指定会话中进行流式聊天，实时返回 AI 响应
- */
-export const sessionsChatStream = <ThrowOnError extends boolean = false>(options: Options<SessionsChatStreamData, ThrowOnError>) => (options.client ?? client).post<SessionsChatStreamResponses, SessionsChatStreamErrors, ThrowOnError>({
-    url: '/sessions/{id}/chat/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 无会话聊天
- *
- * 直接发送消息进行聊天，不需要会话
- */
-export const chatSend = <ThrowOnError extends boolean = false>(options: Options<ChatSendData, ThrowOnError>) => (options.client ?? client).post<ChatSendResponses, ChatSendErrors, ThrowOnError>({
-    url: '/chat',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 无会话流式聊天
- *
- * 直接发送消息进行流式聊天，不需要会话
- */
-export const chatStream = <ThrowOnError extends boolean = false>(options: Options<ChatStreamData, ThrowOnError>) => (options.client ?? client).post<ChatStreamResponses, ChatStreamErrors, ThrowOnError>({
-    url: '/chat/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
  * 终止 Agent 运行
  *
  * 终止当前正在运行的 Agent
@@ -185,3 +136,10 @@ export const agentAbort = <ThrowOnError extends boolean = false>(options: Option
         ...options.headers
     }
 });
+
+/**
+ * 健康检查
+ *
+ * 检查服务是否正常运行
+ */
+export const healthCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthCheckData, ThrowOnError>) => (options?.client ?? client).get<HealthCheckResponses, unknown, ThrowOnError>({ url: '/system/health', ...options });

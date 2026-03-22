@@ -1,21 +1,13 @@
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApp } from '../src/routes.js';
+import { app } from '../src/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_FILE = join(__dirname, '../openapi.json');
 
 async function generateOpenAPI() {
   console.log('生成 OpenAPI 规范...');
-
-  const llmConfig = {
-    apiKey: '',
-    baseUrl: 'https://api.moonshot.cn/v1',
-    model: 'glm-4.7',
-  };
-
-  const app = createApp(llmConfig);
 
   const { generateSpecs } = await import('hono-openapi');
   const specs = await generateSpecs(app);

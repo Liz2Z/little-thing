@@ -4,31 +4,6 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000' | (string & {});
 };
 
-export type HealthCheckData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/health';
-};
-
-export type HealthCheckResponses = {
-    /**
-     * 服务健康状态
-     */
-    200: {
-        /**
-         * 服务状态
-         */
-        status: string;
-        /**
-         * 当前使用的模型
-         */
-        model: string;
-    };
-};
-
-export type HealthCheckResponse = HealthCheckResponses[keyof HealthCheckResponses];
-
 export type SessionsListData = {
     body?: never;
     path?: never;
@@ -498,165 +473,6 @@ export type SessionsChatSendResponses = {
 
 export type SessionsChatSendResponse = SessionsChatSendResponses[keyof SessionsChatSendResponses];
 
-export type SessionsChatStreamData = {
-    body: {
-        /**
-         * 用户消息
-         */
-        message: string;
-    };
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/sessions/{id}/chat/stream';
-};
-
-export type SessionsChatStreamErrors = {
-    /**
-     * 会话不存在
-     */
-    404: {
-        /**
-         * 错误信息
-         */
-        error: string;
-    };
-};
-
-export type SessionsChatStreamError = SessionsChatStreamErrors[keyof SessionsChatStreamErrors];
-
-export type SessionsChatStreamResponses = {
-    /**
-     * 流式响应
-     */
-    200: unknown;
-};
-
-export type ChatSendData = {
-    body: {
-        /**
-         * 消息历史
-         */
-        messages: Array<{
-            /**
-             * 消息 ID
-             */
-            id: string;
-            /**
-             * 消息角色
-             */
-            role: 'user' | 'assistant' | 'system';
-            /**
-             * 消息内容
-             */
-            content: string;
-            /**
-             * 消息时间
-             */
-            timestamp: string;
-        }>;
-    };
-    path?: never;
-    query?: never;
-    url: '/chat';
-};
-
-export type ChatSendErrors = {
-    /**
-     * 服务器错误
-     */
-    500: {
-        /**
-         * 错误信息
-         */
-        error: string;
-    };
-};
-
-export type ChatSendError = ChatSendErrors[keyof ChatSendErrors];
-
-export type ChatSendResponses = {
-    /**
-     * 聊天响应
-     */
-    200: {
-        /**
-         * AI 响应
-         */
-        response: string;
-        /**
-         * Token 使用情况
-         */
-        usage?: {
-            /**
-             * 输入 token 数
-             */
-            promptTokens: number;
-            /**
-             * 输出 token 数
-             */
-            completionTokens: number;
-            /**
-             * 总 token 数
-             */
-            totalTokens: number;
-        };
-    };
-};
-
-export type ChatSendResponse = ChatSendResponses[keyof ChatSendResponses];
-
-export type ChatStreamData = {
-    body: {
-        /**
-         * 消息历史
-         */
-        messages: Array<{
-            /**
-             * 消息 ID
-             */
-            id: string;
-            /**
-             * 消息角色
-             */
-            role: 'user' | 'assistant' | 'system';
-            /**
-             * 消息内容
-             */
-            content: string;
-            /**
-             * 消息时间
-             */
-            timestamp: string;
-        }>;
-    };
-    path?: never;
-    query?: never;
-    url: '/chat/stream';
-};
-
-export type ChatStreamErrors = {
-    /**
-     * 服务器错误
-     */
-    500: {
-        /**
-         * 错误信息
-         */
-        error: string;
-    };
-};
-
-export type ChatStreamError = ChatStreamErrors[keyof ChatStreamErrors];
-
-export type ChatStreamResponses = {
-    /**
-     * 流式响应
-     */
-    200: unknown;
-};
-
 export type AgentAbortData = {
     body: {
         /**
@@ -684,3 +500,28 @@ export type AgentAbortResponses = {
 };
 
 export type AgentAbortResponse = AgentAbortResponses[keyof AgentAbortResponses];
+
+export type HealthCheckData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/system/health';
+};
+
+export type HealthCheckResponses = {
+    /**
+     * 服务健康状态
+     */
+    200: {
+        /**
+         * 服务状态
+         */
+        status: string;
+        /**
+         * 当前使用的模型
+         */
+        model: string;
+    };
+};
+
+export type HealthCheckResponse = HealthCheckResponses[keyof HealthCheckResponses];
