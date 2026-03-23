@@ -1,8 +1,0 @@
-- [x] session 模块包含所有会话相关的业务逻辑和 Schema
-- [x] routes/session.ts 包含会话 + Agent 路由定义
-- [x] routes/system.ts 包含系统路由定义
-- [x] routes/index.ts 正确合并所有路由
-- [x] routes.ts 入口文件简洁，只负责创建 app 和注册各模块路由
-- [x] chat 相关路由已删除
-- [x] 类型检查通过，无 TypeScript 错误
-- [x] 所有原有 API 端点功能正常
