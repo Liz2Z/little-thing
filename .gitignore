@@ -4,3 +4,7 @@ dist/
 coverage/
 playwright-report/
 playwright/.cache/
+
+.trae/
+.claude/
+.vscode/

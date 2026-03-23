@@ -18,5 +18,9 @@ const PORT = process.env.PORT || 3000;
 console.log(`Server running on http://localhost:${PORT}`);
 console.log(`OpenAPI spec available at http://localhost:${PORT}/openapi.json`);
 
+Bun.serve({
+  port: PORT,
+  fetch: app.fetch,
+});
 
 export { app };
