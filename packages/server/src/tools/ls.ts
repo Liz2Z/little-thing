@@ -4,6 +4,7 @@ import nodePath from 'path';
 import type { ToolDefinition, ToolExecutionResult } from './types.js';
 import { resolveToCwd } from './path-utils.js';
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
+import { ValidationError, ForbiddenError, ToolErrors } from '../errors/index.js';
 
 const lsSchema = Type.Object({
   path: Type.Optional(Type.String({ description: 'Directory to list (default: current directory)' })),
@@ -50,11 +51,11 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
     ) => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new Error('Operation aborted'));
+          reject(new ValidationError(ToolErrors.ABORTED));
           return;
         }
 
-        const onAbort = () => reject(new Error('Operation aborted'));
+        const onAbort = () => reject(new ValidationError(ToolErrors.ABORTED));
         signal?.addEventListener('abort', onAbort, { once: true });
 
         (async () => {
@@ -63,13 +64,13 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             const effectiveLimit = limit ?? DEFAULT_LIMIT;
 
             if (!(await ops.exists(dirPath))) {
-              reject(new Error(`Path not found: ${dirPath}`));
+              reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path: dirPath }));
               return;
             }
 
             const stat = await ops.stat(dirPath);
             if (!stat.isDirectory()) {
-              reject(new Error(`Not a directory: ${dirPath}`));
+              reject(new ValidationError(ToolErrors.NOT_A_DIRECTORY, { path: dirPath }));
               return;
             }
 
@@ -77,7 +78,7 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             try {
               entries = await ops.readdir(dirPath);
             } catch (e: any) {
-              reject(new Error(`Cannot read directory: ${e.message}`));
+              reject(new ForbiddenError(ToolErrors.PERMISSION_DENIED, { path: dirPath, reason: e.message }));
               return;
             }
 

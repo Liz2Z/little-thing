@@ -3,6 +3,7 @@ import { describeRoute, validator, resolver } from 'hono-openapi';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { createSessionService } from '../session/index.js';
+import { NotFoundError, SessionErrors } from '../errors/index.js';
 
 const SessionSchema = z.object({
   id: z.string().meta({ description: '会话 ID' }),
@@ -112,7 +113,7 @@ app.get('/:id',
     const id = c.req.param('id');
     const session = sessionService.getSession(id);
     if (!session) {
-      return c.json({ error: 'Session not found' }, 404);
+      throw new NotFoundError(SessionErrors.NOT_FOUND, { sessionId: id });
     }
     return c.json({ session });
   }
@@ -152,7 +153,7 @@ app.delete('/:id',
     if (sessionService.deleteSession(id)) {
       return c.json({ success: true });
     }
-    return c.json({ error: 'Session not found' }, 404);
+    throw new NotFoundError(SessionErrors.NOT_FOUND, { sessionId: id });
   }
 );
 
@@ -195,7 +196,7 @@ app.put('/:id',
     if (sessionService.renameSession(id, name)) {
       return c.json({ success: true });
     }
-    return c.json({ error: 'Session not found' }, 404);
+    throw new NotFoundError(SessionErrors.NOT_FOUND, { sessionId: id });
   }
 );
 
@@ -240,7 +241,7 @@ app.post('/:id/fork',
     if (newSession) {
       return c.json({ session: newSession }, 201);
     }
-    return c.json({ error: 'Session or message not found' }, 404);
+    throw new NotFoundError(SessionErrors.OR_MESSAGE_NOT_FOUND, { sessionId: id, messageId });
   }
 );
 
@@ -283,7 +284,7 @@ app.post('/:id/resume',
     if (sessionService.resumeSession(id, messageId)) {
       return c.json({ success: true });
     }
-    return c.json({ error: 'Session or message not found' }, 404);
+    throw new NotFoundError(SessionErrors.OR_MESSAGE_NOT_FOUND, { sessionId: id, messageId });
   }
 );
 
@@ -334,7 +335,7 @@ app.post('/:id/messages',
     if (sessionService.addMessage(id, message)) {
       return c.json({ success: true });
     }
-    return c.json({ error: 'Session not found' }, 404);
+    throw new NotFoundError(SessionErrors.NOT_FOUND, { sessionId: id });
   }
 );
 
@@ -389,7 +390,7 @@ app.post('/:id/chat',
 
     const session = sessionService.getSession(id);
     if (!session) {
-      return c.json({ error: 'Session not found' }, 404);
+      throw new NotFoundError(SessionErrors.NOT_FOUND, { sessionId: id });
     }
 
     return streamSSE(c, async (stream) => {

@@ -1,60 +1,42 @@
-# Error Code 统一错误码系统设计规范
+# Error Code 统一错误码系统
 
-## 背景与收益
+## 概述
 
-### 为什么需要统一错误码
+为 server 端建立统一的错误码系统，覆盖 API、Agent、Tools、LLM 等所有模块，提供结构化的错误响应。
 
-**当前问题**：
-- 错误返回格式不统一，路由层直接返回 `{ error: 'xxx' }` 字符串
-- Agent 执行过程中会遇到多种错误边界（工具错误、LLM 错误、业务错误等）
-- 前端/CLI 无法基于错误做程序化判断，只能展示字符串
+## 背景
 
-**收益**：
-1. **代码逻辑清晰**：错误码定义集中，一目了然
-2. **前端处理方便**：可基于 `code` 字段做不同 UI 处理（toast 样式、跳转、重试按钮等）
-3. **便于调试**：错误码自描述，无需查表
-4. **可扩展**：`details` 字段可携带上下文信息（如哪个 sessionId 不存在）
-5. **支持国际化**：`message` 可根据 code 映射到不同语言
+### 当前问题
 
-### 错误类型预估
+1. 错误返回格式不统一，路由层直接返回 `{ error: 'xxx' }` 字符串
+2. Agent 执行过程中会遇到多种错误边界（工具错误、LLM 错误、业务错误等），缺乏统一处理
+3. 前端/CLI 无法基于错误做程序化判断，只能展示字符串
+4. 缺乏国际化支持基础
 
-| 模块 | 错误示例 |
-|------|----------|
-| Session | `SESSION.NOT_FOUND` |
-| Message | `MESSAGE.INVALID` |
-| Agent - Tool | `AGENT.TOOL.FILE_NOT_FOUND`, `AGENT.TOOL.PERMISSION_DENIED` |
-| Agent - LLM | `AGENT.LLM.RATE_LIMITED`, `AGENT.LLM.CONTEXT_TOO_LONG` |
-| Agent - Loop | `AGENT.LOOP.MAX_ITERATIONS`, `AGENT.LOOP.ABORTED` |
-| Internal | `INTERNAL.ERROR` |
+### 目标
 
-## 设计决策
+1. 统一错误响应格式
+2. 提供可程序化判断的错误码
+3. 支持上下文信息传递
+4. 为国际化奠定基础
 
-| 决策点 | 选择 | 理由 |
-|--------|------|------|
-| 覆盖范围 | server 全部 | API + Agent + Tools 统一处理 |
-| Code 格式 | `SESSION.NOT_FOUND` | 大写 + 点号分隔，自描述，IDE 友好 |
-| 响应结构 | `{ code, message, details }` | 简洁，details 可携带上下文 |
-| 定义方式 | 枚举 + 工厂函数 | 类型安全，结构一致 |
-| 创建方式 | 单一工厂函数 | 灵活，避免函数膨胀 |
-| HTTP 状态码 | 标准 RESTful | 404/400/403 等，符合语义 |
-| 错误处理 | throw + Hono onError | 服务层 throw，全局统一转换 |
-| 文件位置 | `packages/server/src/errors/` | 可扩展 |
+## 功能需求
 
-## 响应结构
+### FR-1 错误响应格式
 
-```typescript
-interface ErrorResponse {
-  code: string;        // 错误码，如 'SESSION.NOT_FOUND'
-  message: string;     // 人类可读的错误信息
-  details: Record<string, unknown>;  // 上下文信息
-}
-```
+所有 API 错误响应必须遵循统一格式：
 
-**示例**：
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | 错误码，格式为 `{MODULE}-{NUMBER}` |
+| message | string | 是 | 人类可读的错误信息 |
+| details | object | 是 | 上下文信息，可为空对象 |
+
+**响应示例**：
 
 ```json
 {
-  "code": "SESSION.NOT_FOUND",
+  "code": "SESSION-1001",
   "message": "会话不存在",
   "details": {
     "sessionId": "abc-123"
@@ -62,222 +44,112 @@ interface ErrorResponse {
 }
 ```
 
-## 错误码命名规范
+### FR-2 错误码规范
 
-### 格式
+#### 命名格式
 
 ```
-{MODULE}.{ERROR_TYPE}
+{MODULE}-{NUMBER}
 ```
 
-- 全大写
-- 点号分隔
-- 模块名 + 具体错误类型
+- 模块名：全大写
+- 分隔符：连字符 `-`
+- 编号：每个模块独立编号，从 1001 开始递增
 
-### 模块前缀
+#### 模块定义
 
-| 前缀 | 模块 | 说明 |
+| 模块 | 前缀 | 说明 |
 |------|------|------|
-| `SESSION` | 会话管理 | 会话 CRUD 相关错误 |
-| `MESSAGE` | 消息管理 | 消息相关错误 |
-| `AGENT.TOOL` | Agent 工具执行 | 文件操作、命令执行等 |
-| `AGENT.LLM` | Agent LLM 调用 | API 调用、响应解析等 |
-| `AGENT.LOOP` | Agent 循环控制 | 迭代限制、中断等 |
-| `INTERNAL` | 内部错误 | 未预期的系统错误 |
+| 会话管理 | SESSION | 会话 CRUD 相关错误 |
+| 消息管理 | MESSAGE | 消息相关错误 |
+| Agent 循环 | AGENT | 迭代限制、中断等 |
+| Agent 工具 | TOOL | 文件操作、命令执行等 |
+| LLM 调用 | LLM | API 调用、响应解析等 |
+| 内部错误 | INTERNAL | 未预期的系统错误 |
 
-### 层级结构
+### FR-3 错误码定义
 
-```
-SESSION
-├── NOT_FOUND
-└── ...
+错误码以元组形式定义：`[code, status, message]`
 
-MESSAGE
-├── INVALID
-└── ...
+#### SessionErrors
 
-AGENT
-├── TOOL
-│   ├── FILE_NOT_FOUND
-│   ├── PERMISSION_DENIED
-│   └── TIMEOUT
-├── LLM
-│   ├── RATE_LIMITED
-│   ├── CONTEXT_TOO_LONG
-│   └── PARSE_FAILED
-└── LOOP
-    ├── MAX_ITERATIONS
-    └── ABORTED
+| 常量 | Code | 说明 | Status |
+|------|------|------|--------|
+| NOT_FOUND | SESSION-1001 | 会话不存在 | 404 |
+| OR_MESSAGE_NOT_FOUND | SESSION-1002 | 会话或消息不存在 | 404 |
 
-INTERNAL
-└── ERROR
-```
+#### AgentErrors
 
-## 文件结构
+| 常量 | Code | 说明 | Status |
+|------|------|------|--------|
+| MAX_ITERATIONS | AGENT-1001 | 达到最大迭代次数 | 200 |
+| ABORTED | AGENT-1002 | Agent 被中断 | 200 |
 
-```
-packages/server/src/errors/
-└── index.ts           # 枚举定义 + 工厂函数 + AppError 类
-```
+#### ToolErrors
 
-## API 设计
+| 常量 | Code | 说明 | Status |
+|------|------|------|--------|
+| FILE_NOT_FOUND | TOOL-1001 | 文件不存在 | 400 |
+| PERMISSION_DENIED | TOOL-1002 | 权限不足 | 403 |
+| INVALID_PATH | TOOL-1003 | 路径不合法 | 400 |
+| TIMEOUT | TOOL-1004 | 操作超时 | 408 |
 
-```typescript
-// 错误码枚举
-export enum ErrorCode {
-  // Session
-  SESSION_NOT_FOUND = 'SESSION.NOT_FOUND',
+#### LlmErrors
 
-  // Agent - Tool
-  AGENT_TOOL_FILE_NOT_FOUND = 'AGENT.TOOL.FILE_NOT_FOUND',
-  AGENT_TOOL_PERMISSION_DENIED = 'AGENT.TOOL.PERMISSION_DENIED',
+| 常量 | Code | 说明 | Status |
+|------|------|------|--------|
+| RATE_LIMITED | LLM-1001 | API 请求频率限制 | 429 |
+| CONTEXT_TOO_LONG | LLM-1002 | 上下文长度超限 | 400 |
+| PARSE_FAILED | LLM-1003 | 响应解析失败 | 500 |
+| UNAUTHORIZED | LLM-1004 | API 密钥无效 | 401 |
 
-  // Agent - LLM
-  AGENT_LLM_RATE_LIMITED = 'AGENT.LLM.RATE_LIMITED',
+#### InternalErrors
 
-  // Agent - Loop
-  AGENT_LOOP_MAX_ITERATIONS = 'AGENT.LOOP.MAX_ITERATIONS',
-  AGENT_LOOP_ABORTED = 'AGENT.LOOP.ABORTED',
+| 常量 | Code | 说明 | Status |
+|------|------|------|--------|
+| ERROR | INTERNAL-1001 | 服务器内部错误 | 500 |
 
-  // Internal
-  INTERNAL_ERROR = 'INTERNAL.ERROR',
-}
+### FR-4 错误类设计
 
-// 错误元数据
-interface ErrorMeta {
-  status: number;      // HTTP 状态码
-  message: string;     // 默认错误信息
-}
+按 HTTP 语义提供错误类，便于代码中语义化地抛出错误：
 
-// 错误元数据映射
-export const ERROR_META: Record<ErrorCode, ErrorMeta> = {
-  [ErrorCode.SESSION_NOT_FOUND]: {
-    status: 404,
-    message: '会话不存在',
-  },
-  // ...
-};
+| 错误类 | HTTP Status | 使用场景 |
+|--------|-------------|----------|
+| NotFoundError | 404 | 资源不存在 |
+| ValidationError | 400 | 参数校验失败 |
+| UnauthorizedError | 401 | 认证失败 |
+| ForbiddenError | 403 | 权限不足 |
+| InternalError | 500 | 内部错误 |
 
-// 自定义错误类
-export class AppError extends Error {
-  code: ErrorCode;
-  status: number;
-  details: Record<string, unknown>;
+### FR-5 全局错误处理
 
-  constructor(code: ErrorCode, details: Record<string, unknown> = {}) {
-    super(ERROR_META[code].message);
-    this.code = code;
-    this.status = ERROR_META[code].status;
-    this.details = details;
-  }
-}
+- 所有错误通过全局错误处理器统一捕获并转换
+- 未预期的异常返回 `INTERNAL-1001`
 
-// 工厂函数
-export function createError(
-  code: ErrorCode,
-  details: Record<string, unknown> = {}
-): AppError {
-  return new AppError(code, details);
-}
-```
+## 非功能需求
 
-## Hono 全局错误处理
+### NFR-1 类型安全
 
-```typescript
-// server/src/index.ts
-import { Hono } from 'hono';
-import { AppError, createError, ErrorCode } from './errors';
+错误码必须在 TypeScript 中有完整的类型定义，支持 IDE 自动补全。
 
-const app = new Hono();
+### NFR-2 调用栈保留
 
-app.onError((err, c) => {
-  if (err instanceof AppError) {
-    return c.json({
-      code: err.code,
-      message: err.message,
-      details: err.details,
-    }, err.status);
-  }
+错误创建时必须保留真实的调用栈信息，不能被工厂函数污染。
 
-  // 未预期的错误
-  console.error('Unhandled error:', err);
-  return c.json({
-    code: ErrorCode.INTERNAL_ERROR,
-    message: '服务器内部错误',
-    details: {},
-  }, 500);
-});
-```
+## 约束
 
-## 使用示例
-
-### 服务层
-
-```typescript
-// session/service.ts
-import { createError, ErrorCode } from '../errors';
-
-function getSession(id: string) {
-  const session = store.get(id);
-  if (!session) {
-    throw createError(ErrorCode.SESSION_NOT_FOUND, { sessionId: id });
-  }
-  return session;
-}
-```
-
-### 路由层
-
-```typescript
-// routes/session.ts
-app.get('/:id', (c) => {
-  const id = c.req.param('id');
-  const session = sessionService.getSession(id); // 可能 throw
-  return c.json({ session });
-});
-```
-
-### Agent 工具层
-
-```typescript
-// tools/read.ts
-import { createError, ErrorCode } from '../errors';
-
-async function readFile(path: string) {
-  try {
-    return await fs.readFile(path);
-  } catch {
-    throw createError(ErrorCode.AGENT_TOOL_FILE_NOT_FOUND, { path });
-  }
-}
-```
-
-## 实现步骤
-
-1. **创建 errors 模块**
-   - `packages/server/src/errors/index.ts`
-   - 定义 ErrorCode 枚举
-   - 定义 ERROR_META 映射
-   - 实现 AppError 类
-   - 实现 createError 工厂函数
-
-2. **添加全局错误处理**
-   - 在 `index.ts` 添加 `app.onError` 处理器
-
-3. **改造现有代码**
-   - 路由层 7 处错误返回改为 throw
-   - Agent/Tools 内部错误按需改造
-
-4. **更新 OpenAPI 文档**
-   - 错误响应 schema 更新为统一格式
+1. 覆盖范围仅限于 `packages/server`
+2. HTTP 状态码遵循 RESTful 规范
+3. 新增错误码需更新本文档
 
 ## 影响范围
 
-| 文件 | 变更 |
-|------|------|
-| `src/errors/index.ts` | 新增 |
-| `src/index.ts` | 添加 onError |
-| `src/routes/session.ts` | 7 处错误返回改造 |
-| `src/session/service.ts` | 内部错误改造 |
-| `src/tools/*.ts` | 按需改造 |
-| `src/agent/*.ts` | 按需改造 |
+| 文件/目录 | 变更类型 |
+|-----------|----------|
+| `src/errors/` | 新增 |
+| `src/index.ts` | 修改（注册错误处理器） |
+| `src/routes/*.ts` | 修改（错误返回改造） |
+| `src/session/*.ts` | 修改（内部错误改造） |
+| `src/tools/*.ts` | 修改（工具错误改造） |
+| `src/agent/*.ts` | 修改（Agent 错误改造） |
+| `src/providers/*.ts` | 修改（LLM 错误改造） |

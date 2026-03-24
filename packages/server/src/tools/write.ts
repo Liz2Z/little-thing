@@ -3,6 +3,7 @@ import { mkdir as fsMkdir, writeFile as fsWriteFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { ToolDefinition } from './types.js';
 import { resolveToCwd } from './path-utils.js';
+import { ValidationError, ToolErrors } from '../errors/index.js';
 
 const writeSchema = Type.Object({
   path: Type.String({ description: 'Path to the file to write (relative or absolute)' }),
@@ -45,7 +46,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
       return new Promise<{ content: Array<{ type: 'text'; text: string }>; details: undefined }>(
         (resolve, reject) => {
           if (signal?.aborted) {
-            reject(new Error('Operation aborted'));
+            reject(new ValidationError(ToolErrors.ABORTED));
             return;
           }
 
@@ -53,7 +54,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
           const onAbort = () => {
             aborted = true;
-            reject(new Error('Operation aborted'));
+            reject(new ValidationError(ToolErrors.ABORTED));
           };
 
           if (signal) {

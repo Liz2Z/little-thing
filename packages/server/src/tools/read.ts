@@ -4,6 +4,7 @@ import { access as fsAccess, readFile as fsReadFile } from 'fs/promises';
 import type { ToolDefinition, ToolExecutionResult, TextContent, ImageContent } from './types.js';
 import { resolveReadPath } from './path-utils.js';
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
+import { ValidationError, ToolErrors } from '../errors/index.js';
 
 const readSchema = Type.Object({
   path: Type.String({ description: 'Path to the file to read (relative or absolute)' }),
@@ -52,7 +53,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
       return new Promise<{ content: (TextContent | ImageContent)[]; details: ReadToolDetails | undefined }>(
         (resolve, reject) => {
           if (signal?.aborted) {
-            reject(new Error('Operation aborted'));
+            reject(new ValidationError(ToolErrors.ABORTED));
             return;
           }
 
@@ -60,7 +61,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
           const onAbort = () => {
             aborted = true;
-            reject(new Error('Operation aborted'));
+            reject(new ValidationError(ToolErrors.ABORTED));
           };
 
           if (signal) {
@@ -84,7 +85,10 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
               const startLineDisplay = startLine + 1;
 
               if (startLine >= allLines.length) {
-                throw new Error(`Offset ${offset} is beyond end of file (${allLines.length} lines total)`);
+                throw new ValidationError(ToolErrors.OFFSET_BEYOND_END, {
+                  offset,
+                  totalLines: allLines.length,
+                });
               }
 
               let selectedContent: string;

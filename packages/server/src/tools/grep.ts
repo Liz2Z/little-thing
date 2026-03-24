@@ -13,6 +13,7 @@ import {
   truncateHead,
   truncateLine,
 } from './truncate.js';
+import { ValidationError, InternalError, ToolErrors } from '../errors/index.js';
 
 const grepSchema = Type.Object({
   pattern: Type.String({ description: 'Search pattern (regex or literal string)' }),
@@ -83,7 +84,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
     ) => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new Error('Operation aborted'));
+          reject(new ValidationError(ToolErrors.ABORTED));
           return;
         }
 
@@ -105,7 +106,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
             try {
               isDirectory = await ops.isDirectory(searchPath);
             } catch (_err) {
-              settle(() => reject(new Error(`Path not found: ${searchPath}`)));
+              settle(() => reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path: searchPath })));
               return;
             }
             const contextValue = context && context > 0 ? context : 0;
@@ -248,20 +249,20 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
 
             child.on('error', (error) => {
               cleanup();
-              settle(() => reject(new Error(`Failed to run ripgrep: ${error.message}`)));
+              settle(() => reject(new InternalError(ToolErrors.EXECUTION_FAILED, { reason: error.message })));
             });
 
             child.on('close', async (code) => {
               cleanup();
 
               if (aborted) {
-                settle(() => reject(new Error('Operation aborted')));
+                settle(() => reject(new ValidationError(ToolErrors.ABORTED)));
                 return;
               }
 
               if (!killedDueToLimit && code !== 0 && code !== 1) {
                 const errorMsg = stderr.trim() || `ripgrep exited with code ${code}`;
-                settle(() => reject(new Error(errorMsg)));
+                settle(() => reject(new InternalError(ToolErrors.EXECUTION_FAILED, { reason: errorMsg })));
                 return;
               }
 

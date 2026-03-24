@@ -12,6 +12,7 @@ import {
   stripBom,
 } from './edit-diff.js';
 import { resolveToCwd } from './path-utils.js';
+import { ValidationError, ToolErrors } from '../errors/index.js';
 
 const editSchema = Type.Object({
   path: Type.String({ description: 'Path to the file to edit (relative or absolute)' }),
@@ -63,7 +64,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
         details: EditToolDetails | undefined;
       }>((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new Error('Operation aborted'));
+          reject(new ValidationError(ToolErrors.ABORTED));
           return;
         }
 
@@ -71,7 +72,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
         const onAbort = () => {
           aborted = true;
-          reject(new Error('Operation aborted'));
+          reject(new ValidationError(ToolErrors.ABORTED));
         };
 
         if (signal) {
@@ -86,7 +87,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
               if (signal) {
                 signal.removeEventListener('abort', onAbort);
               }
-              reject(new Error(`File not found: ${path}`));
+              reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path }));
               return;
             }
 
@@ -115,9 +116,10 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new Error(
-                  `Could not find the exact text in ${path}. The old text must match exactly including all whitespace and newlines.`,
-                ),
+                new ValidationError(ToolErrors.OLD_TEXT_NOT_FOUND, {
+                  path,
+                  hint: 'The old text must match exactly including all whitespace and newlines.',
+                }),
               );
               return;
             }
@@ -131,9 +133,11 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new Error(
-                  `Found ${occurrences} occurrences of the text in ${path}. The text must be unique. Please provide more context to make it unique.`,
-                ),
+                new ValidationError(ToolErrors.OLD_TEXT_MULTIPLE, {
+                  path,
+                  occurrences,
+                  hint: 'Please provide more context to make it unique.',
+                }),
               );
               return;
             }
@@ -153,9 +157,10 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new Error(
-                  `No changes made to ${path}. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected.`,
-                ),
+                new ValidationError(ToolErrors.OLD_TEXT_NOT_FOUND, {
+                  path,
+                  hint: 'The replacement produced identical content. This might indicate an issue with special characters.',
+                }),
               );
               return;
             }

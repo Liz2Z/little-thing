@@ -1,5 +1,6 @@
 import type { LLMConfig, ChatCompletionRequest, ChatCompletionResponse, ToolDefinition } from './types.js';
 import type { Message } from '../session/types.js';
+import { InternalError, LlmErrors } from '../errors/index.js';
 
 export class AnthropicProvider {
   private config: LLMConfig;
@@ -37,7 +38,10 @@ export class AnthropicProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`LLM API error: ${response.status} ${error}`);
+      throw new InternalError(LlmErrors.API_ERROR, {
+        status: response.status,
+        response: error,
+      });
     }
 
     const data = await response.json();
