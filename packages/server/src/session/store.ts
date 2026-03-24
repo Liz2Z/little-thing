@@ -11,6 +11,8 @@ function generateMessageId(): string {
   return `msg_${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+import { settings } from '../config/index.js';
+
 export class SessionStore {
   private indexStore: JsonStore<SessionIndex>;
   private messageStores: Map<string, JsonlStore<Message>> = new Map();
@@ -51,7 +53,7 @@ export class SessionStore {
     );
   }
 
-  createSession(name?: string): SessionMeta {
+  createSession(name?: string, provider?: string, model?: string): SessionMeta {
     const index = this.indexStore.load();
     const id = generateId();
     const now = new Date().toISOString();
@@ -63,6 +65,8 @@ export class SessionStore {
       createdAt: now,
       updatedAt: now,
       messageCount: 0,
+      provider: provider || settings.llm.provider,
+      model: model || settings.llm.model,
     };
 
     index.sessions[id] = meta;

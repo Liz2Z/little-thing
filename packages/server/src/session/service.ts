@@ -23,8 +23,8 @@ export class SessionService {
     return this.sessionStore.getSession(id);
   }
 
-  createSession(name?: string): SessionMeta {
-    return this.sessionStore.createSession(name);
+  createSession(name?: string, provider?: string, model?: string): SessionMeta {
+    return this.sessionStore.createSession(name, provider, model);
   }
 
   deleteSession(id: string): boolean {

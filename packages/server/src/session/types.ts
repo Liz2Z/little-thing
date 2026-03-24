@@ -76,6 +76,10 @@ export interface SessionMeta {
   parentSessionId?: string;
   /** 分叉来源消息 ID */
   forkedFromMessageId?: string;
+  /** LLM Provider 名称 */
+  provider?: string;
+  /** LLM 模型名称 */
+  model?: string;
 }
 
 export interface SessionIndex {

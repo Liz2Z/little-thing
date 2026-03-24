@@ -70,10 +70,12 @@ app.post('/',
   }),
   validator('json', z.object({
     name: z.string().optional().meta({ description: '会话名称' }),
+    provider: z.string().optional().meta({ description: 'LLM Provider 名称' }),
+    model: z.string().optional().meta({ description: 'LLM 模型名称' }),
   })),
   (c) => {
     const body = c.req.valid('json');
-    const session = sessionService.createSession(body.name);
+    const session = sessionService.createSession(body.name, body.provider, body.model);
     return c.json({ session }, 201);
   }
 );
