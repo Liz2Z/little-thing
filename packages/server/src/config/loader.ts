@@ -104,8 +104,12 @@ export function mergeAndValidateSettings(
 ): Settings {
   let merged: any = {};
   for (const config of configs) {
-    merged = deepMerge(merged, config);
+    if (Object.keys(config).length > 0) {
+      merged = deepMerge(merged, config);
+    }
   }
+
+
 
   try {
     return settingsSchema.parse(merged);

@@ -8,9 +8,6 @@ export const providerSchema = z.object({
   maxRetries: z.number().min(0).max(5).default(3),
 });
 
-// Providers 记录 Schema
-export const providersSchema = z.record(providerSchema);
-
 // LLM 配置 Schema
 export const llmSchema = z.object({
   provider: z.string().default('zhipu'),
@@ -19,7 +16,6 @@ export const llmSchema = z.object({
   baseUrl: z.string().url().optional(),
   timeout: z.number().min(1000).max(120000).optional(),
   maxRetries: z.number().min(0).max(5).optional(),
-  // 内置和自定义 Provider 列表在 Settings 中定义
 });
 
 // 服务器配置 Schema
@@ -37,9 +33,12 @@ export const loggingSchema = z.object({
 // 完整 Settings Schema
 export const settingsSchema = z.object({
   version: z.string().optional().default('1.0.0'),
-  llm: llmSchema,
-  providers: providersSchema.default({}),
-  customProviders: providersSchema.default({}),
+  llm: llmSchema.default({
+    provider: 'zhipu',
+    model: 'glm-4.7',
+  }),
+  providers: z.object({}).catchall(providerSchema).default({}),
+  customProviders: z.object({}).catchall(providerSchema).default({}),
   server: serverSchema.default({
     port: 3000,
     host: 'localhost',
@@ -48,11 +47,11 @@ export const settingsSchema = z.object({
     level: 'info',
     format: 'text',
   }),
-  ui: z.record(z.unknown()).default({}),
+  ui: z.object({}).catchall(z.unknown()).default({}),
 });
 
 // Credentials Schema
 export const credentialsSchema = z.object({
-  providers: z.record(z.string()).default({}),
-  customProviders: z.record(z.string()).default({}),
+  providers: z.object({}).catchall(z.string()).default({}),
+  customProviders: z.object({}).catchall(z.string()).default({}),
 });

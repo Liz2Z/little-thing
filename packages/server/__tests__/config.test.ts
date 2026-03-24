@@ -32,8 +32,11 @@ describe('Config System', () => {
     await mkdir(projectConfigDir, { recursive: true });
     
     // Clear env vars
-    delete process.env.LITTLETHING_SERVER_PORT;
-    delete process.env.LITTLETHING_LLM_PROVIDER;
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('LITTLETHING_')) {
+        delete process.env[key];
+      }
+    }
     delete process.env.TEST_API_KEY;
   });
 
@@ -115,8 +118,8 @@ describe('Config System', () => {
         credentialsPath: credentialsPath
       });
 
-      expect(settings.customProviders['p1']?.baseUrl).toBe('http://p1.com');
-      expect(settings.customProviders['p2']?.baseUrl).toBe('http://p2.com');
+      expect((settings.customProviders as any)['p1']?.baseUrl).toBe('http://p1.com');
+      expect((settings.customProviders as any)['p2']?.baseUrl).toBe('http://p2.com');
     });
   });
 
