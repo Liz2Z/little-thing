@@ -25,9 +25,10 @@ export class AnthropicProvider {
   async chatWithTools(
     messages: Message[],
     tools?: ToolDefinition[],
+    model?: string,
   ): Promise<ChatCompletionResponse> {
     const requestBody: ChatCompletionRequest = {
-      model: this.config.model,
+      model: model || this.config.model,
       messages,
       max_tokens: 4096,
       tools: tools

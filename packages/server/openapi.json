@@ -786,9 +786,13 @@
                       "type": "string"
                     }
                   },
-                  "maxIterations": {
-                    "description": "最大迭代次数",
-                    "type": "number"
+                  "provider": {
+                    "description": "LLM Provider 名称",
+                    "type": "string"
+                  },
+                  "model": {
+                    "description": "LLM 模型名称",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -898,6 +902,42 @@
                   "required": [
                     "status",
                     "model"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/system/config": {
+      "get": {
+        "operationId": "system.config",
+        "summary": "获取系统配置",
+        "description": "获取当前系统的配置信息",
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "系统配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "description": "当前使用的模型"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "description": "当前使用的 Provider"
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "provider"
                   ]
                 }
               }

@@ -429,9 +429,13 @@ export type SessionsChatSendData = {
          */
         enabledTools?: Array<string>;
         /**
-         * 最大迭代次数
+         * LLM Provider 名称
          */
-        maxIterations?: number;
+        provider?: string;
+        /**
+         * LLM 模型名称
+         */
+        model?: string;
     };
     path: {
         id: string;
@@ -533,6 +537,31 @@ export type HealthCheckResponses = {
 };
 
 export type HealthCheckResponse = HealthCheckResponses[keyof HealthCheckResponses];
+
+export type SystemConfigData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/system/config';
+};
+
+export type SystemConfigResponses = {
+    /**
+     * 系统配置
+     */
+    200: {
+        /**
+         * 当前使用的模型
+         */
+        model: string;
+        /**
+         * 当前使用的 Provider
+         */
+        provider: string;
+    };
+};
+
+export type SystemConfigResponse = SystemConfigResponses[keyof SystemConfigResponses];
 
 export type ProviderModelsListData = {
     body?: never;

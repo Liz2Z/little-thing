@@ -3,7 +3,6 @@ import type { AgentRunContext } from './types.js';
 
 export function createAgentRunContext(
   enabled_tools: string[],
-  max_iterations: number = 10,
   parent_span_id: string | null = null,
   run_id?: string
 ): AgentRunContext {
@@ -16,7 +15,6 @@ export function createAgentRunContext(
     parent_span_id,
     seq_counter: 0,
     iteration: 0,
-    max_iterations,
     enabled_tools,
     aborted,
 
@@ -31,7 +29,6 @@ export function createAgentRunContext(
     createChildSpan(): AgentRunContext {
       return createAgentRunContext(
         this.enabled_tools,
-        this.max_iterations,
         this.newSpanId(),
         this.run_id
       );

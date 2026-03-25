@@ -4,6 +4,7 @@ import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import { eventBus } from "../events/bus.js";
 import type { Event } from "../events/types.js";
+import { settings } from "../settings/index.js";
 
 const app = new Hono();
 
@@ -32,6 +33,37 @@ app.get(
   }),
   (c) => {
     return c.json({ status: "ok" });
+  },
+);
+
+app.get(
+  "/config",
+  describeRoute({
+    operationId: "system.config",
+    summary: "获取系统配置",
+    description: "获取当前系统的配置信息",
+    tags: ["System"],
+    responses: {
+      200: {
+        description: "系统配置",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                model: z.string().meta({ description: "当前使用的模型" }),
+                provider: z.string().meta({ description: "当前使用的 Provider" }),
+              }),
+            ),
+          },
+        },
+      },
+    },
+  }),
+  (c) => {
+    return c.json({
+      model: settings.llm.model.get(),
+      provider: settings.llm.provider.get(),
+    });
   },
 );
 

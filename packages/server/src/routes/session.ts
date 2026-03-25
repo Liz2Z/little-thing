@@ -384,11 +384,12 @@ app.post('/:id/chat',
   validator('json', z.object({
     message: z.string().meta({ description: '用户消息' }),
     enabledTools: z.array(z.string()).optional().meta({ description: '启用的工具列表' }),
-    maxIterations: z.number().optional().meta({ description: '最大迭代次数' }),
+    provider: z.string().optional().meta({ description: 'LLM Provider 名称' }),
+    model: z.string().optional().meta({ description: 'LLM 模型名称' }),
   })),
   async (c) => {
     const id = c.req.param('id');
-    const { message, enabledTools, maxIterations } = c.req.valid('json');
+    const { message, enabledTools, provider, model } = c.req.valid('json');
 
     const session = sessionService.getSession(id);
     if (!session) {
@@ -398,7 +399,8 @@ app.post('/:id/chat',
     return streamSSE(c, async (stream) => {
       for await (const event of sessionService.chat(id, message, {
         enabledTools,
-        maxIterations,
+        provider,
+        model,
       })) {
         await stream.writeSSE({
           event: event.type,

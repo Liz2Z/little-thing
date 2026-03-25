@@ -20,8 +20,6 @@ export enum AgentStopReason {
   MaxTokens = 'max_tokens',
   /** 遇到停止序列 */
   StopSequence = 'stop_sequence',
-  /** 达到最大迭代次数 */
-  MaxIterations = 'max_iterations',
   /** 用户主动终止 */
   UserAbort = 'user_abort',
   /** 发生错误 */
@@ -37,7 +35,6 @@ export enum AgentErrorType {
   LlmError = 'llm_error',
   ToolError = 'tool_error',
   Timeout = 'timeout',
-  MaxIterations = 'max_iterations',
   UserAbort = 'user_abort',
   Unknown = 'unknown',
 }
@@ -104,8 +101,6 @@ export interface AgentStartEvent extends AgentEventBase {
   message: string;
   /** 启用的工具列表 */
   enabled_tools: string[];
-  /** 最大迭代次数 */
-  max_iterations: number;
 }
 
 /** Agent 思考事件 - LLM 内部思考过程 */
@@ -210,8 +205,6 @@ export interface AgentRunContext {
   seq_counter: number;
   /** 当前迭代轮次 */
   iteration: number;
-  /** 最大迭代次数 */
-  max_iterations: number;
   /** 已启用的工具 */
   enabled_tools: string[];
   /** 是否被终止 */

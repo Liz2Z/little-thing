@@ -1,30 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSessionStore } from '@/store/sessionStore';
-import { useConfigStore } from '@/store/configStore';
 import { SessionList } from '@/components/SessionList';
 import { MessageList } from '@/components/MessageList';
 import { ChatInput } from '@/components/ChatInput';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Loader2, Bot } from 'lucide-react';
-import { providerModelsList } from '@littlething/sdk';
-
-interface Model {
-  id: string;
-  name: string;
-  displayName?: string;
-}
+import { Menu, X } from 'lucide-react';
 
 export function ChatPage() {
   const [showSessions, setShowSessions] = useState(false);
-  const [models, setModels] = useState<Model[]>([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const navigate = useNavigate();
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
-
-  const apiUrl = useConfigStore((state) => state.apiUrl);
-  const model = useConfigStore((state) => state.model);
-  const setConfig = useConfigStore((state) => state.setConfig);
 
   const sessions = useSessionStore((state) => state.sessions);
   const activeSessionId = useSessionStore((state) => state.activeSessionId);
@@ -55,32 +41,12 @@ export function ChatPage() {
     }
   };
 
-  const fetchModels = async () => {
-    setIsLoadingModels(true);
-    try {
-      const response = await providerModelsList({ baseUrl: apiUrl });
-      const fetchedModels = response.data?.models ?? [];
-      setModels(fetchedModels);
-    } catch (error) {
-      console.error('Failed to fetch models:', error);
-    } finally {
-      setIsLoadingModels(false);
-    }
-  };
-
   useEffect(() => {
     if (!initialized) {
       initialize();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized]);
-
-  useEffect(() => {
-    if (apiUrl) {
-      fetchModels();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiUrl]);
 
   useEffect(() => {
     if (!initialized || isLoading || sessions.length === 0) return;
@@ -136,42 +102,22 @@ export function ChatPage() {
           {activeSessionId ? (
             <div className="h-full flex flex-col bg-card rounded-xl border border-stone-200/60 overflow-hidden">
               <header className="flex-shrink-0 px-5 py-3.5 border-b border-stone-100">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowSessions(!showSessions)}
-                      className="sm:hidden h-8 w-8 text-stone-400 hover:text-stone-600 flex-shrink-0"
-                    >
-                      {showSessions ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-                    </Button>
-                    <div className="flex-1 min-w-0">
-                      <h1 className="font-medium text-stone-800 text-sm truncate">
-                        {activeSession?.name || '新会话'}
-                      </h1>
-                      <p className="text-xs text-stone-400 mt-0.5">
-                        {activeSessionMessages.length} 条消息
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Bot className="w-4 h-4 text-stone-400" />
-                    {isLoadingModels ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
-                    ) : (
-                      <select
-                        value={model}
-                        onChange={(e) => setConfig({ model: e.target.value })}
-                        className="h-7 px-2 text-xs rounded-md border border-stone-200 bg-stone-50 text-stone-600 focus:border-primary focus:ring-1 focus:ring-primary/20 focus:outline-none transition-subtle cursor-pointer hover:bg-stone-100"
-                      >
-                        {models.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.displayName || m.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowSessions(!showSessions)}
+                    className="sm:hidden h-8 w-8 text-stone-400 hover:text-stone-600 flex-shrink-0"
+                  >
+                    {showSessions ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                  </Button>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="font-medium text-stone-800 text-sm truncate">
+                      {activeSession?.name || '新会话'}
+                    </h1>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {activeSessionMessages.length} 条消息
+                    </p>
                   </div>
                 </div>
               </header>

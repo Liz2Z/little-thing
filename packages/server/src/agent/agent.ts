@@ -25,8 +25,7 @@ export class Agent {
 
   constructor(
     private provider: AnthropicProvider,
-    private toolExecutor: ToolExecutor,
-    private defaultMaxIterations: number = 10
+    private toolExecutor: ToolExecutor
   ) {}
 
   abort(runId: string): boolean {
@@ -43,14 +42,14 @@ export class Agent {
     messages: Message[],
     options: {
       enabledTools?: string[];
-      maxIterations?: number;
       runId?: string;
       abortSignal?: AbortSignal;
+      provider?: string;
+      model?: string;
     } = {}
   ): AsyncGenerator<AgentEvent> {
     const ctx = createAgentRunContext(
       options.enabledTools || this.toolExecutor.getAllDefinitions().map((t: ToolDefinition) => t.name),
-      options.maxIterations || this.defaultMaxIterations,
       null,
       options.runId
     );
@@ -62,7 +61,6 @@ export class Agent {
       status: EventStatus.Start,
       message,
       enabled_tools: ctx.enabled_tools,
-      max_iterations: ctx.max_iterations,
     });
 
     try {
@@ -73,7 +71,7 @@ export class Agent {
         timestamp: new Date().toISOString(),
       }];
 
-      for (ctx.iteration = 0; ctx.iteration < ctx.max_iterations; ctx.iteration++) {
+      while (true) {
         if (ctx.isAborted() || options.abortSignal?.aborted) {
           yield this.createEvent<AgentAbortEvent>(ctx, {
             type: AgentEventType.Abort,
@@ -84,11 +82,13 @@ export class Agent {
           return;
         }
 
+        ctx.iteration++;
+
         const tools = ctx.enabled_tools
           .map(name => this.toolExecutor.getDefinition(name))
           .filter((t): t is ToolDefinition => t !== undefined);
 
-        const response = await this.provider.chatWithTools(messages, tools);
+        const response = await this.provider.chatWithTools(messages, tools, options.model);
 
         if (response.toolUses && response.toolUses.length > 0) {
           for (const toolUse of response.toolUses) {
@@ -172,14 +172,6 @@ export class Agent {
           return;
         }
       }
-
-      yield this.createEvent<AgentErrorEvent>(ctx, {
-        type: AgentEventType.Error,
-        status: EventStatus.Failed,
-        error: '达到最大迭代次数限制',
-        error_type: AgentErrorType.MaxIterations,
-        iteration: ctx.iteration,
-      });
 
     } catch (error) {
       yield this.createEvent<AgentErrorEvent>(ctx, {

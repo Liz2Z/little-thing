@@ -235,7 +235,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const response = await fetch(`${apiUrl}/sessions/${activeSessionId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({
+          message: content,
+        }),
       });
 
       if (!response.ok) {

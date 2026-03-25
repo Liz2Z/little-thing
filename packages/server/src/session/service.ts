@@ -6,7 +6,8 @@ import type { AgentEvent } from '../agent/types.js';
 
 export interface ChatOptions {
   enabledTools?: string[];
-  maxIterations?: number;
+  provider?: string;
+  model?: string;
 }
 
 export class SessionService {
@@ -75,7 +76,8 @@ export class SessionService {
     try {
       for await (const event of this.agent.run(message, session.messages, {
         enabledTools: options?.enabledTools,
-        maxIterations: options?.maxIterations,
+        provider: options?.provider,
+        model: options?.model,
       })) {
         yield event;
 
