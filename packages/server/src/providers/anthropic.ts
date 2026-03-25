@@ -6,8 +6,8 @@ import { settings } from '../settings/index.js';
 export class AnthropicProvider {
   private config: ProviderConfig & { apiKey: string; model: string };
 
-  constructor(providerName?: string) {
-
+  constructor() {
+    // console.log(settings.llm.get());
     this.config = {
       baseUrl: settings.llm.baseUrl.get(),
       apiKey: settings.llm.apiKey.get(),
@@ -28,24 +28,62 @@ export class AnthropicProvider {
       tools: tools ? this.convertToolsToAnthropicFormat(tools) as ToolDefinition[] : undefined,
     };
 
+    if (!this.config.apiKey) {
+      throw new InternalError(LlmErrors.UNAUTHORIZED, {
+        message: 'API Key is missing. Please check your configuration.',
+      });
+    }
+
+    if (!this.config.baseUrl) {
+      throw new InternalError(LlmErrors.API_ERROR, {
+        message: 'Base URL is missing. Please check your configuration.',
+      });
+    }
+
     const response = await fetch(`${this.config.baseUrl}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01',
+        // Support some proxies that use Authorization header
         'Authorization': `Bearer ${this.config.apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = errorText;
+      }
+
+      // Check for unauthorized specifically
+      if (response.status === 401) {
+        throw new InternalError(LlmErrors.UNAUTHORIZED, {
+          status: 401,
+          response: errorData,
+        });
+      }
+
       throw new InternalError(LlmErrors.API_ERROR, {
         status: response.status,
-        response: error,
+        response: errorData,
       });
     }
 
     const data = await response.json();
+
+    // Handle common error formats in 200 OK responses
+    if (data.error || data.type === 'error') {
+      throw new InternalError(LlmErrors.API_ERROR, {
+        status: response.status,
+        response: data.error || data,
+      });
+    }
 
     const content: string[] = [];
     const toolUses: Array<{ id: string; name: string; input: unknown }> = [];

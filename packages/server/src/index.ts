@@ -1,12 +1,16 @@
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
+// must import before other modules
+import { settings } from './settings';
+
+
+
 import { sessionRoutes, systemRoutes } from './routes';
 import { errorHandler } from './errors';
-import { loadConfig, settings } from './settings';
 
-await loadConfig();
 
 const rawSettings = settings.get();
+
 
 if (!rawSettings?.server) {
   throw new Error('Server config not loaded');
@@ -29,10 +33,12 @@ const host = rawSettings.server.host;
 console.log(`Server running on http://${host}:${port}`);
 console.log(`OpenAPI spec available at http://${host}:${port}/openapi.json`);
 
-Bun.serve({
-  port: port,
-  hostname: host,
-  fetch: app.fetch,
-});
+if (import.meta.main) {
+  Bun.serve({
+    port: port,
+    hostname: host,
+    fetch: app.fetch,
+  });
+}
 
 export { app };

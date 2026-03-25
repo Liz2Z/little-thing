@@ -30,6 +30,7 @@ function deepMerge(target: any, source: any): any {
     const targetValue = target[key];
     const sourceValue = source[key];
 
+
     if (Array.isArray(sourceValue)) {
       result[key] = sourceValue;
     } else if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
@@ -192,12 +193,19 @@ export class Settings<T extends ZodObjectLike> {
     const paths = this.getPaths();
     let merged: any = {};
 
+    // 0. 获取默认值作为基础层
+    try {
+      merged = this.schema.parse({});
+    } catch (e) {
+      // 如果无法解析空对象获取默认值，则从空对象开始
+    }
+
     // 1. 加载全局配置
     if (existsSync(paths.global)) {
       try {
         const content = JSON.parse(readFileSync(paths.global, 'utf-8'));
         merged = deepMerge(merged, content);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 2. 加载 Credentials
@@ -206,24 +214,15 @@ export class Settings<T extends ZodObjectLike> {
         // Enforce permissions (sync)
         try {
           chmodSync(paths.credentials, 0o600);
-        } catch (e) {}
+        } catch (e) {
+          console.error(e)
+        }
 
         const credentials = JSON.parse(readFileSync(paths.credentials, 'utf-8'));
-        if (credentials.providers) {
-          const mappedProviders: any = {};
-          for (const [name, key] of Object.entries(credentials.providers)) {
-            mappedProviders[name] = { apiKey: key };
-          }
-          merged = deepMerge(merged, { providers: mappedProviders });
-        }
-        if (credentials.customProviders) {
-          const mappedCustom: any = {};
-          for (const [name, key] of Object.entries(credentials.customProviders)) {
-            mappedCustom[name] = { apiKey: key };
-          }
-          merged = deepMerge(merged, { customProviders: mappedCustom });
-        }
-      } catch (e) {}
+        merged = deepMerge(merged, credentials);
+      } catch (e) {
+        console.log(e)
+      }
     }
 
     // 3. 加载本地配置
@@ -231,7 +230,7 @@ export class Settings<T extends ZodObjectLike> {
       try {
         const content = JSON.parse(readFileSync(paths.local, 'utf-8'));
         merged = deepMerge(merged, content);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 4. 加载环境变量
@@ -245,6 +244,7 @@ export class Settings<T extends ZodObjectLike> {
 
     // 环境变量展开
     merged = expandEnvVarsInObject(merged);
+
 
     // 校验
     try {
@@ -301,8 +301,8 @@ export class Settings<T extends ZodObjectLike> {
   private notify(changedPath: string[]) {
     for (const listener of this.listeners) {
       const isMatch = listener.path.every((p, i) => changedPath[i] === p) ||
-                      changedPath.every((p, i) => listener.path[i] === p);
-      
+        changedPath.every((p, i) => listener.path[i] === p);
+
       if (isMatch) {
         let value = this.data as any;
         for (const p of listener.path) {

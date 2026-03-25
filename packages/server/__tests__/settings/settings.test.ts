@@ -24,12 +24,14 @@ describe('Settings Core', () => {
       enabled: z.coerce.boolean().default(false),
       level: z.coerce.number().default(1),
     }).default({ enabled: false, level: 1 }),
-    providers: z.record(z.string(), z.object({
-      apiKey: z.string(),
-    })).default({}),
-    customProviders: z.record(z.string(), z.object({
-      apiKey: z.string(),
-    })).default({}),
+    providers: z.record(z.string(), z.union([
+      z.string().transform(apiKey => ({ apiKey })),
+      z.object({ apiKey: z.string() })
+    ])).default({}),
+    customProviders: z.record(z.string(), z.union([
+      z.string().transform(apiKey => ({ apiKey })),
+      z.object({ apiKey: z.string() })
+    ])).default({}),
   });
 
   beforeEach(async () => {

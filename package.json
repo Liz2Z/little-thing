@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:server": "bun run --filter @littlething/server dev",
+    "dev:server": "bun run --stream --filter @littlething/server --elide-lines=0 dev",
     "dev:cli": "bun run --filter @littlething/cli dev",
     "dev:web": "bun run --filter @littlething/web dev",
     "dev": "bun run dev:server & bun run dev:web",

@@ -52,6 +52,14 @@ export type SessionsCreateData = {
          * 会话名称
          */
         name?: string;
+        /**
+         * LLM Provider 名称
+         */
+        provider?: string;
+        /**
+         * LLM 模型名称
+         */
+        model?: string;
     };
     path?: never;
     query?: never;
