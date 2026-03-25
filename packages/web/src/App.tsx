@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ChatPage } from './pages/ChatPage';
-import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   return (
@@ -11,7 +10,6 @@ export default function App() {
           <Route index element={<Navigate to="/chat" replace />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:sessionId" element={<ChatPage />} />
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

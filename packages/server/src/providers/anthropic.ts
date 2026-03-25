@@ -3,6 +3,8 @@ import type {
   ChatCompletionResponse,
   ToolDefinition,
   ProviderConfig,
+  ModelsResponse,
+  ModelInfo,
 } from "./types.js";
 import type { Message } from "../session/types.js";
 import { InternalError, LlmErrors } from "../errors/index.js";
@@ -154,5 +156,96 @@ export class AnthropicProvider {
       };
     }
     return result;
+  }
+
+  async getModels(): Promise<ModelsResponse> {
+    if (!this.config.apiKey) {
+      throw new InternalError(LlmErrors.UNAUTHORIZED, {
+        message: "API Key is missing. Please check your configuration.",
+      });
+    }
+
+    if (!this.config.baseUrl) {
+      throw new InternalError(LlmErrors.API_ERROR, {
+        message: "Base URL is missing. Please check your configuration.",
+      });
+    }
+
+    const response = await fetch(`${this.config.baseUrl}/v1/models`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.config.apiKey,
+        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${this.config.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = errorText;
+      }
+
+      if (response.status === 401) {
+        throw new InternalError(LlmErrors.UNAUTHORIZED, {
+          status: 401,
+          response: errorData,
+        });
+      }
+
+      throw new InternalError(LlmErrors.API_ERROR, {
+        status: response.status,
+        response: errorData,
+      });
+    }
+
+    const data = await response.json();
+
+    // 处理不同的 API 响应格式
+    let models: ModelInfo[] = [];
+
+    // 标准 Anthropic/OpenAI 格式: { data: [{ id, name, ... }] }
+    if (data.data && Array.isArray(data.data)) {
+      models = data.data.map((model: unknown) => {
+        if (typeof model === "object" && model !== null) {
+          const m = model as Record<string, unknown>;
+          return {
+            id: (m.id as string) || (m.name as string) || "",
+            name: (m.name as string) || (m.id as string) || "",
+            displayName: m.display_name as string | undefined,
+            description: m.description as string | undefined,
+            contextLength: m.context_length as number | undefined,
+          };
+        }
+        return { id: "", name: "" };
+      });
+    }
+    // 智谱格式: { models: [{ id, name, ... }] } 或直接 { models: ["id1", "id2"] }
+    else if (data.models) {
+      if (Array.isArray(data.models)) {
+        models = data.models.map((model: unknown) => {
+          if (typeof model === "string") {
+            return { id: model, name: model };
+          }
+          if (typeof model === "object" && model !== null) {
+            const m = model as Record<string, unknown>;
+            return {
+              id: (m.id as string) || (m.name as string) || "",
+              name: (m.name as string) || (m.id as string) || "",
+              displayName: m.display_name as string | undefined,
+              description: m.description as string | undefined,
+              contextLength: m.context_length as number | undefined,
+            };
+          }
+          return { id: "", name: "" };
+        });
+      }
+    }
+
+    return { models };
   }
 }

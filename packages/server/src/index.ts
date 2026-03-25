@@ -3,7 +3,7 @@ import { Hono } from "hono";
 // must import before other modules
 import { settings } from "./settings";
 
-import { sessionRoutes, systemRoutes } from "./routes";
+import { sessionRoutes, systemRoutes, providerRoutes } from "./routes";
 import { errorHandler } from "./errors";
 
 const rawSettings = settings.get();
@@ -31,7 +31,8 @@ const app = new Hono()
     }),
   )
   .route("/sessions", sessionRoutes)
-  .route("/system", systemRoutes);
+  .route("/system", systemRoutes)
+  .route("/provider", providerRoutes);
 
 app.get("/openapi.json", async (c) => {
   const { generateSpecs } = await import("hono-openapi");

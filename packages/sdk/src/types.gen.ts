@@ -533,3 +533,65 @@ export type HealthCheckResponses = {
 };
 
 export type HealthCheckResponse = HealthCheckResponses[keyof HealthCheckResponses];
+
+export type ProviderModelsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/provider/models';
+};
+
+export type ProviderModelsListErrors = {
+    /**
+     * 未授权
+     */
+    401: {
+        /**
+         * 错误信息
+         */
+        error: string;
+    };
+    /**
+     * 服务器错误
+     */
+    500: {
+        /**
+         * 错误信息
+         */
+        error: string;
+    };
+};
+
+export type ProviderModelsListError = ProviderModelsListErrors[keyof ProviderModelsListErrors];
+
+export type ProviderModelsListResponses = {
+    /**
+     * 可用模型列表
+     */
+    200: {
+        models: Array<{
+            /**
+             * 模型 ID
+             */
+            id: string;
+            /**
+             * 模型名称
+             */
+            name: string;
+            /**
+             * 显示名称
+             */
+            displayName?: string;
+            /**
+             * 模型描述
+             */
+            description?: string;
+            /**
+             * 上下文长度
+             */
+            contextLength?: number;
+        }>;
+    };
+};
+
+export type ProviderModelsListResponse = ProviderModelsListResponses[keyof ProviderModelsListResponses];

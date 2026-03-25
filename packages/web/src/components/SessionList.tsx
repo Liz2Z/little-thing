@@ -2,8 +2,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { SessionItem } from './SessionItem';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, MessageCircle, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, MessageCircle } from 'lucide-react';
 
 interface SessionListProps {
   onCreateSession: () => void;
@@ -59,16 +58,6 @@ export function SessionList({ onCreateSession, onClose }: SessionListProps) {
           )}
         </ScrollArea>
       )}
-
-      <div className="p-3 border-t border-stone-100 flex-shrink-0">
-        <Link
-          to="/settings"
-          className="flex items-center gap-2 px-3 py-2 text-stone-400 hover:text-stone-600 hover:bg-stone-50 rounded-lg transition-colors"
-        >
-          <Settings className="w-4 h-4" />
-          <span className="text-sm">设置</span>
-        </Link>
-      </div>
     </div>
   );
 }

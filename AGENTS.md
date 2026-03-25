@@ -14,6 +14,10 @@
 - 不要直接使用 homedir() 来获取用户目录，而要使用 xdg-basedir 库来获取
 - 错误处理不能直接 throw Error，而要 throw 自定义错误类，参考 packages/server/src/errors/index.ts
 
+## web 规范
+
+- 使用 lucide react，不允许自己写 svg，不允许使用 emoji
+
 ## 代码规范
 
 - **UI 开发时必读**: file://./docs/UI-DESIGN.md

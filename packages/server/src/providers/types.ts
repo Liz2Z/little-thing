@@ -42,3 +42,15 @@ export interface ToolParameter {
   required?: boolean;
   enum?: string[];
 }
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  displayName?: string;
+  description?: string;
+  contextLength?: number;
+}
+
+export interface ModelsResponse {
+  models: ModelInfo[];
+}
