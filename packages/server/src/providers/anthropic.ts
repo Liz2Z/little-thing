@@ -1,13 +1,18 @@
 import type { ChatCompletionRequest, ChatCompletionResponse, ToolDefinition, ProviderConfig } from './types.js';
 import type { Message } from '../session/types.js';
 import { InternalError, LlmErrors } from '../errors/index.js';
-import { resolveProvider } from './resolver.js';
+import { settings } from '../settings/index.js';
 
 export class AnthropicProvider {
   private config: ProviderConfig & { apiKey: string; model: string };
 
   constructor(providerName?: string) {
-    this.config = resolveProvider(providerName);
+
+    this.config = {
+      baseUrl: settings.llm.baseUrl.get(),
+      apiKey: settings.llm.apiKey.get(),
+      model: settings.llm.model.get(),
+    };
   }
 
 

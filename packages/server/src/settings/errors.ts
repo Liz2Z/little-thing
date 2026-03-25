@@ -25,10 +25,3 @@ export class CredentialsError extends ConfigError {
     this.name = 'CredentialsError';
   }
 }
-
-export class ProviderNotFoundError extends ConfigError {
-  constructor(providerName: string) {
-    super(`Provider not found: ${providerName}`);
-    this.name = 'ProviderNotFoundError';
-  }
-}

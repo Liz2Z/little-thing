@@ -1,7 +1,7 @@
 import z from 'zod';
-import { Config } from '../../src/config/core';
+import { Settings } from '../../src/settings/core';
 
-const config = new Config(
+const config = new Settings(
   'littlething',
   z.object({
     llm: z.object({

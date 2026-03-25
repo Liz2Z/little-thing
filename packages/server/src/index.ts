@@ -2,12 +2,13 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { sessionRoutes, systemRoutes } from './routes';
 import { errorHandler } from './errors';
-import { loadConfig, settingsConfig } from './config';
+import { loadConfig, settings } from './settings';
 
 await loadConfig();
 
-const settings = settingsConfig.getRaw();
-if (!settings?.server) {
+const rawSettings = settings.get();
+
+if (!rawSettings?.server) {
   throw new Error('Server config not loaded');
 }
 
@@ -22,8 +23,8 @@ const app = new Hono()
   .route('/sessions', sessionRoutes)
   .route('/system', systemRoutes);
 
-const port = settings.server.port;
-const host = settings.server.host;
+const port = rawSettings.server.port;
+const host = rawSettings.server.host;
 
 console.log(`Server running on http://${host}:${port}`);
 console.log(`OpenAPI spec available at http://${host}:${port}/openapi.json`);

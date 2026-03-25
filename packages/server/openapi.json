@@ -135,6 +135,14 @@
                   "name": {
                     "description": "会话名称",
                     "type": "string"
+                  },
+                  "provider": {
+                    "description": "LLM Provider 名称",
+                    "type": "string"
+                  },
+                  "model": {
+                    "description": "LLM 模型名称",
+                    "type": "string"
                   }
                 }
               }
