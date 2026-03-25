@@ -7,6 +7,10 @@
 - do not repeat yourself
 - 组合优于继承
 
+## server 代码规范
+- 不要直接使用 homedir() 来获取用户目录，而要使用 xdg-basedir 库来获取
+- 错误处理不能直接 throw Error，而要 throw 自定义错误类，参考 packages/server/src/errors/index.ts
+
 ## 代码规范
 - **UI 开发时必读**: file://./docs/UI-DESIGN.md
 - **处理前端、tsx、react逻辑时必读！！！**: file://./docs/DEV-GUIDELINES-FRONTEND.md

@@ -1,5 +1,6 @@
 import { JsonStore, JsonlStore } from '../storage/index.js';
 import type { Message, SessionMeta, SessionIndex, Session } from './types.js';
+import { getLlmConfig } from '../providers/resolver.js';
 
 function generateId(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -10,8 +11,6 @@ function generateId(): string {
 function generateMessageId(): string {
   return `msg_${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
-
-import { settings } from '../config/index.js';
 
 export class SessionStore {
   private indexStore: JsonStore<SessionIndex>;
@@ -58,6 +57,7 @@ export class SessionStore {
     const id = generateId();
     const now = new Date().toISOString();
     const sessionName = name || `会话-${Object.keys(index.sessions).length + 1}`;
+    const llm = getLlmConfig();
 
     const meta: SessionMeta = {
       id,
@@ -65,8 +65,8 @@ export class SessionStore {
       createdAt: now,
       updatedAt: now,
       messageCount: 0,
-      provider: provider || settings.llm.provider,
-      model: model || settings.llm.model,
+      provider: provider || llm.provider,
+      model: model || llm.model,
     };
 
     index.sessions[id] = meta;

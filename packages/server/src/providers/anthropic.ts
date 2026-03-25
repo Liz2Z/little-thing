@@ -1,24 +1,13 @@
-import type { LLMConfig, ChatCompletionRequest, ChatCompletionResponse, ToolDefinition } from './types.js';
+import type { ChatCompletionRequest, ChatCompletionResponse, ToolDefinition, ProviderConfig } from './types.js';
 import type { Message } from '../session/types.js';
 import { InternalError, LlmErrors } from '../errors/index.js';
-import { getProviderConfig, getCredentials, settings } from '../config';
+import { resolveProvider } from './resolver.js';
 
 export class AnthropicProvider {
-  private config: LLMConfig;
+  private config: ProviderConfig & { apiKey: string; model: string };
 
-  constructor(providerName: string = settings.llm.provider) {
-    const config = getProviderConfig(providerName);
-    const apiKey = getCredentials(providerName);
-
-    if (!config) {
-      throw new Error(`Provider not found: ${providerName}`);
-    }
-
-    this.config = {
-      ...config,
-      apiKey: apiKey || '',
-      model: settings.llm.model, // fallback to global default if needed
-    };
+  constructor(providerName?: string) {
+    this.config = resolveProvider(providerName);
   }
 
 

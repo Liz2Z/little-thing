@@ -1,9 +1,11 @@
 import type { Message } from '../session/types.js';
 
-export interface LLMConfig {
+export interface ProviderConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  timeout?: number;
+  maxRetries?: number;
 }
 
 export interface ChatCompletionRequest {

@@ -1,9 +1,9 @@
 import { chmod, existsSync, readFileSync } from 'fs';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { xdgConfig } from 'xdg-basedir';
 import { homedir } from 'os';
-import { credentialsSchema } from './schema';
-import { Credentials } from './types';
+import { credentialsSchema, Credentials } from './schemas';
 import { expandEnvVar } from './env';
 import { CredentialsError } from './errors';
 
@@ -75,5 +75,6 @@ export async function saveCredentials(
  * 获取默认的 credentials 路径 (~/.config/littlething/credentials)
  */
 export function getDefaultCredentialsPath(): string {
-  return join(homedir(), '.config', 'littlething', 'credentials');
+  const configDir = xdgConfig ?? join(homedir(), '.config');
+  return join(configDir, 'littlething', 'credentials');
 }

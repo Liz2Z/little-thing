@@ -2,10 +2,14 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { sessionRoutes, systemRoutes } from './routes';
 import { errorHandler } from './errors';
-import { loadSettings, settings } from './config';
+import { loadConfig, settingsConfig } from './config';
 
-// Load settings before starting the server
-await loadSettings();
+await loadConfig();
+
+const settings = settingsConfig.getRaw();
+if (!settings?.server) {
+  throw new Error('Server config not loaded');
+}
 
 const app = new Hono()
   .onError(errorHandler)

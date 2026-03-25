@@ -5,6 +5,13 @@ export class ConfigError extends Error {
   }
 }
 
+export class ConfigNotLoadedError extends ConfigError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConfigNotLoadedError';
+  }
+}
+
 export class ValidationError extends ConfigError {
   constructor(message: string) {
     super(message);
@@ -16,5 +23,12 @@ export class CredentialsError extends ConfigError {
   constructor(message: string) {
     super(message);
     this.name = 'CredentialsError';
+  }
+}
+
+export class ProviderNotFoundError extends ConfigError {
+  constructor(providerName: string) {
+    super(`Provider not found: ${providerName}`);
+    this.name = 'ProviderNotFoundError';
   }
 }
