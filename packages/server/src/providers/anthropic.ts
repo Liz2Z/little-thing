@@ -1,7 +1,12 @@
-import type { ChatCompletionRequest, ChatCompletionResponse, ToolDefinition, ProviderConfig } from './types.js';
-import type { Message } from '../session/types.js';
-import { InternalError, LlmErrors } from '../errors/index.js';
-import { settings } from '../settings/index.js';
+import type {
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ToolDefinition,
+  ProviderConfig,
+} from "./types.js";
+import type { Message } from "../session/types.js";
+import { InternalError, LlmErrors } from "../errors/index.js";
+import { settings } from "../settings/index.js";
 
 export class AnthropicProvider {
   private config: ProviderConfig & { apiKey: string; model: string };
@@ -15,39 +20,39 @@ export class AnthropicProvider {
     };
   }
 
-
-
   async chatWithTools(
     messages: Message[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
   ): Promise<ChatCompletionResponse> {
     const requestBody: ChatCompletionRequest = {
       model: this.config.model,
       messages,
       max_tokens: 4096,
-      tools: tools ? this.convertToolsToAnthropicFormat(tools) as ToolDefinition[] : undefined,
+      tools: tools
+        ? (this.convertToolsToAnthropicFormat(tools) as ToolDefinition[])
+        : undefined,
     };
 
     if (!this.config.apiKey) {
       throw new InternalError(LlmErrors.UNAUTHORIZED, {
-        message: 'API Key is missing. Please check your configuration.',
+        message: "API Key is missing. Please check your configuration.",
       });
     }
 
     if (!this.config.baseUrl) {
       throw new InternalError(LlmErrors.API_ERROR, {
-        message: 'Base URL is missing. Please check your configuration.',
+        message: "Base URL is missing. Please check your configuration.",
       });
     }
 
-    const response = await fetch(`${this.config.baseUrl}/messages`, {
-      method: 'POST',
+    const response = await fetch(`${this.config.baseUrl}/v1/messages`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.config.apiKey,
-        'anthropic-version': '2023-06-01',
+        "Content-Type": "application/json",
+        "x-api-key": this.config.apiKey,
+        "anthropic-version": "2023-06-01",
         // Support some proxies that use Authorization header
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        Authorization: `Bearer ${this.config.apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -78,10 +83,22 @@ export class AnthropicProvider {
     const data = await response.json();
 
     // Handle common error formats in 200 OK responses
-    if (data.error || data.type === 'error') {
+    // Standard Anthropic format
+    if (data.error || data.type === "error") {
       throw new InternalError(LlmErrors.API_ERROR, {
         status: response.status,
         response: data.error || data,
+      });
+    }
+
+    // Zhipu API format: {code: number, msg: string, success: boolean}
+    if (data.code !== undefined && !data.success) {
+      throw new InternalError(LlmErrors.API_ERROR, {
+        status: data.code,
+        response: {
+          error: data.msg || data.message || "Unknown API error",
+          code: data.code,
+        },
       });
     }
 
@@ -89,9 +106,9 @@ export class AnthropicProvider {
     const toolUses: Array<{ id: string; name: string; input: unknown }> = [];
 
     for (const item of data.content || []) {
-      if (item.type === 'text') {
+      if (item.type === "text") {
         content.push(item.text);
-      } else if (item.type === 'tool_use') {
+      } else if (item.type === "tool_use") {
         toolUses.push({
           id: item.id,
           name: item.name,
@@ -101,7 +118,7 @@ export class AnthropicProvider {
     }
 
     return {
-      content: content.join(''),
+      content: content.join(""),
       toolUses: toolUses.length > 0 ? toolUses : undefined,
       usage: data.usage,
       stop_reason: data.stop_reason,
@@ -109,11 +126,11 @@ export class AnthropicProvider {
   }
 
   private convertToolsToAnthropicFormat(tools: ToolDefinition[]): unknown[] {
-    return tools.map(tool => ({
+    return tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       input_schema: {
-        type: 'object',
+        type: "object",
         properties: this.convertParameters(tool.parameters),
         required: Object.entries(tool.parameters)
           .filter(([, param]) => param.required)
@@ -122,7 +139,12 @@ export class AnthropicProvider {
     }));
   }
 
-  private convertParameters(params: Record<string, { type: string; description?: string; enum?: string[] }>): Record<string, unknown> {
+  private convertParameters(
+    params: Record<
+      string,
+      { type: string; description?: string; enum?: string[] }
+    >,
+  ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const [name, param] of Object.entries(params)) {
       result[name] = {
@@ -133,5 +155,4 @@ export class AnthropicProvider {
     }
     return result;
   }
-
 }
