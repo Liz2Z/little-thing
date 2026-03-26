@@ -30,6 +30,11 @@ export const LlmErrors = {
   API_ERROR: ['LLM-1005', 500, 'LLM API 错误'] as const,
 };
 
+export const ConfigErrors = {
+  NOT_LOADED: ['CONFIG-1001', 500, '服务器配置未加载'] as const,
+  INVALID: ['CONFIG-1002', 500, '服务器配置无效'] as const,
+};
+
 export const InternalErrors = {
   ERROR: ['INTERNAL-1001', 500, '服务器内部错误'] as const,
 };
@@ -41,6 +46,7 @@ export type ErrorCode =
   | typeof AgentErrors[keyof typeof AgentErrors][0]
   | typeof ToolErrors[keyof typeof ToolErrors][0]
   | typeof LlmErrors[keyof typeof LlmErrors][0]
+  | typeof ConfigErrors[keyof typeof ConfigErrors][0]
   | typeof InternalErrors[keyof typeof InternalErrors][0];
 
 export interface ErrorResponse {

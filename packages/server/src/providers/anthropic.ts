@@ -8,7 +8,7 @@ import type {
   StreamChunk,
 } from "./types.js";
 import type { Message } from "../session/types.js";
-import { InternalError, LlmErrors } from "../errors/index.js";
+import { UnauthorizedError, InternalError, LlmErrors } from "../errors/index.js";
 import { settings } from "../settings/index.js";
 
 export class AnthropicProvider {
@@ -51,7 +51,7 @@ export class AnthropicProvider {
     }
 
     if (!this.config.apiKey) {
-      throw new InternalError(LlmErrors.UNAUTHORIZED, {
+      throw new UnauthorizedError(LlmErrors.UNAUTHORIZED, {
         message: "API Key is missing. Please check your configuration.",
       });
     }
@@ -83,7 +83,7 @@ export class AnthropicProvider {
       }
 
       if (response.status === 401) {
-        throw new InternalError(LlmErrors.UNAUTHORIZED, {
+        throw new UnauthorizedError(LlmErrors.UNAUTHORIZED, {
           status: 401,
           response: errorData,
         });
@@ -104,14 +104,13 @@ export class AnthropicProvider {
     const content: string[] = [];
     const thinking: string[] = [];
     const toolUses: Array<{ id: string; name: string; input: unknown }> = [];
-    let currentToolUse: { id?: string; name?: string; input?: Record<string, unknown> } | null = null;
+    let currentToolUse: { id?: string; name?: string; jsonBuffer: string } | null = null;
     let usage: { input_tokens: number; output_tokens: number } | undefined;
     let stopReason: string | undefined;
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let firstChunk = true;
 
     try {
       while (true) {
@@ -128,12 +127,6 @@ export class AnthropicProvider {
           const data = line.slice(6).trim();
           if (data === "[DONE]") continue;
 
-          // 调试：打印第一个 chunk
-          if (firstChunk) {
-            console.error("[DEBUG] First SSE chunk:", data.substring(0, 200));
-            firstChunk = false;
-          }
-
           try {
             const json = JSON.parse(data);
 
@@ -142,7 +135,7 @@ export class AnthropicProvider {
               if (json.content_block?.type === "thinking") {
                 // 开始思考块
               } else if (json.content_block?.type === "tool_use") {
-                currentToolUse = { id: json.content_block.id, name: json.content_block.name, input: {} };
+                currentToolUse = { id: json.content_block.id, name: json.content_block.name, jsonBuffer: "" };
               }
             } else if (json.type === "content_block_delta") {
               if (json.delta?.type === "thinking_delta") {
@@ -154,20 +147,20 @@ export class AnthropicProvider {
                 content.push(text);
                 yield { type: "content_delta", delta: text };
               } else if (json.delta?.type === "input_json_delta" && currentToolUse) {
-                const partialJson = json.delta.partial_json || "";
-                try {
-                  const merged = { ...(currentToolUse.input || {}), ...JSON.parse(partialJson) };
-                  currentToolUse.input = merged;
-                } catch {
-                  // 部分JSON，等待更多数据
-                }
+                currentToolUse.jsonBuffer += json.delta.partial_json || "";
               }
             } else if (json.type === "content_block_stop") {
               if (currentToolUse && currentToolUse.id && currentToolUse.name) {
+                let input: unknown = {};
+                try {
+                  input = currentToolUse.jsonBuffer ? JSON.parse(currentToolUse.jsonBuffer) : {};
+                } catch {
+                  // JSON 解析失败，使用空对象
+                }
                 toolUses.push({
                   id: currentToolUse.id,
                   name: currentToolUse.name,
-                  input: currentToolUse.input || {},
+                  input,
                 });
                 yield { type: "tool_use", toolUse: toolUses[toolUses.length - 1] };
               }
@@ -233,7 +226,7 @@ export class AnthropicProvider {
 
   async getModels(): Promise<ModelsResponse> {
     if (!this.config.apiKey) {
-      throw new InternalError(LlmErrors.UNAUTHORIZED, {
+      throw new UnauthorizedError(LlmErrors.UNAUTHORIZED, {
         message: "API Key is missing. Please check your configuration.",
       });
     }
@@ -264,7 +257,7 @@ export class AnthropicProvider {
       }
 
       if (response.status === 401) {
-        throw new InternalError(LlmErrors.UNAUTHORIZED, {
+        throw new UnauthorizedError(LlmErrors.UNAUTHORIZED, {
           status: 401,
           response: errorData,
         });

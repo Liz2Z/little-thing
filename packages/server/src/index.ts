@@ -4,12 +4,12 @@ import { Hono } from "hono";
 import { settings } from "./settings";
 
 import { sessionRoutes, systemRoutes, providerRoutes } from "./routes";
-import { errorHandler } from "./errors";
+import { errorHandler, InternalError, ConfigErrors } from "./errors";
 
 const rawSettings = settings.get();
 
 if (!rawSettings?.server) {
-  throw new Error("Server config not loaded");
+  throw new InternalError(ConfigErrors.NOT_LOADED);
 }
 
 const port = rawSettings.server.port;

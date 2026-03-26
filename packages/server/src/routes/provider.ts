@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { describeRoute, resolver } from "hono-openapi";
 import { z } from "zod";
 import { AnthropicProvider } from "../providers/anthropic.js";
-import { InternalError } from "../errors/index.js";
 
 const app = new Hono();
 
@@ -61,18 +60,9 @@ app.get(
     },
   }),
   async (c) => {
-    try {
-      const provider = new AnthropicProvider();
-      const models = await provider.getModels();
-      return c.json(models);
-    } catch (error) {
-      if (error instanceof InternalError) {
-        if (error.status === 401) {
-          return c.json({ error: "API Key 未配置或无效" }, 401);
-        }
-      }
-      return c.json({ error: "获取模型列表失败" }, 500);
-    }
+    const provider = new AnthropicProvider();
+    const models = await provider.getModels();
+    return c.json(models);
   },
 );
 
