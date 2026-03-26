@@ -148,7 +148,7 @@ Agent 通过构造函数接收 model，不在内部创建：
 
 ```typescript
 import { streamText, type LanguageModel } from 'ai';
-import { toCoreMessages } from '../session/convert.js';
+import { toModelMessages } from '../session/convert.js';
 import { toToolSet } from './convert.js';
 
 export class Agent {
@@ -160,7 +160,7 @@ export class Agent {
   async *run(message: string, messages: Message[], options: AgentOptions = {}) {
     const result = streamText({
       model: this.model,
-      messages: toCoreMessages([...messages, { role: 'user', content: message }]),
+      messages: toModelMessages([...messages, { role: 'user', content: message }]),
       tools: toToolSet(this.toolExecutor.getDefinitions(options.enabledTools)),
       maxTokens: 4096,
     });
@@ -219,7 +219,7 @@ async function handleChat(req: Request) {
 import { type CoreMessage } from 'ai';
 import type { Message } from './types.js';
 
-export function toCoreMessages(messages: Message[]): CoreMessage[] {
+export function toModelMessages(messages: Message[]): CoreMessage[] {
   return messages.map(msg => {
     if (typeof msg.content === 'string') {
       return { role: msg.role, content: msg.content };
