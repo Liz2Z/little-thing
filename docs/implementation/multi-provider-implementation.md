@@ -2,494 +2,275 @@
 
 ## 概述
 
-本文档描述多模型供应商支持的具体实现方案。
+本文档描述基于 Vercel AI SDK 的多模型供应商支持实现方案。
+
+**核心思路**：
+
+1. 前端传递 `provider` 和 `model`
+2. 从 `models.json` 查询配置（SDK 包名、baseUrl、环境变量）
+3. 在外部初始化 model，依赖注入 Agent
+4. Agent 直接使用 AI SDK 的 `streamText()` 和 `fullStream`
+
+## 数据流
+
+```
+前端请求 { provider: 'zhipuai-coding-plan', model: 'glm-4.7' }
+                    │
+                    ▼
+        ┌─────────────────────┐
+        │    models.json      │
+        │  查询 provider 配置: │
+        │  - npm: @ai-sdk/xxx │
+        │  - api: baseUrl     │
+        │  - env: API_KEY 名   │
+        └─────────────────────┘
+                    │
+                    ▼
+        ┌─────────────────────┐
+        │   createModel()     │
+        │   创建 model 实例    │
+        └─────────────────────┘
+                    │
+                    ▼ (依赖注入)
+        ┌─────────────────────┐
+        │      Agent          │
+        │   streamText()      │
+        └─────────────────────┘
+```
+
+## models.json 结构
+
+```json
+{
+  "zhipuai-coding-plan": {
+    "id": "zhipuai-coding-plan",
+    "env": ["ZHIPU_API_KEY"],
+    "npm": "@ai-sdk/openai-compatible",
+    "api": "https://open.bigmodel.cn/api/coding/paas/v4",
+    "name": "Zhipu AI Coding Plan",
+    "models": {
+      "glm-4.7": { ... }
+    }
+  }
+}
+```
+
+字段说明：
+- `npm`: AI SDK 包名，如 `@ai-sdk/openai-compatible`、`@ai-sdk/anthropic`
+- `api`: baseUrl
+- `env`: 环境变量名，用于获取 apiKey
 
 ## 目录结构
 
 ```
 packages/server/src/
 ├── providers/
-│   ├── index.ts           # 导出和 Provider 工厂
-│   ├── types.ts           # 类型定义
-│   ├── base.ts            # Provider 基类（可选）
-│   ├── anthropic.ts       # Anthropic Provider
-│   ├── openai.ts          # OpenAI Provider
-│   └── gemini.ts          # Gemini Provider
-├── models/
-│   ├── models.json        # 从 models.dev 拉取的数据
-│   └── sync.ts            # 同步脚本
+│   ├── index.ts              # 导出
+│   ├── models.json           # 模型配置数据
+│   └── factory.ts            # 创建 AI SDK model 实例
+├── session/
+│   ├── types.ts              # Message 类型定义
+│   ├── store.ts              # 消息存储
+│   └── convert.ts            # Message → CoreMessage 转换
 └── agent/
-    ├── agent.ts           # Agent 核心（接收 Provider 实例）
-    └── context.ts         # Agent 上下文
+    ├── agent.ts              # 接收 model 依赖注入
+    └── convert.ts            # ToolDefinition → ToolSet 转换
+```
+
+## 依赖
+
+```json
+{
+  "dependencies": {
+    "ai": "^5.0.0",
+    "@ai-sdk/anthropic": "^2.0.0",
+    "@ai-sdk/openai": "^2.0.0",
+    "@ai-sdk/openai-compatible": "^1.0.0"
+  }
+}
 ```
 
 ## 实现步骤
 
-### 步骤 1：定义类型 (providers/types.ts)
+### 步骤 1：Provider 工厂 (providers/factory.ts)
 
 ```typescript
-// 模型元信息
-export interface Model {
-  id: string;
-  displayName: string;
-  contextWindow: number;
-  supportsVision?: boolean;
-  supportsTools?: boolean;
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import modelsData from './models.json';
+
+interface ProviderConfig {
+  npm: string;
+  api: string;
+  env: string[];
 }
 
-// 对话选项
-export interface ChatOptions {
-  model: string;
-  maxTokens?: number;
-  temperature?: number;
-  system?: string;
-  tools?: Tool[];
-}
+export function createModel(providerId: string, modelId: string) {
+  const providerConfig = modelsData[providerId] as ProviderConfig | undefined;
 
-// 统一消息格式（基于 Anthropic）
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string | ContentBlock[];
-}
-
-export interface ContentBlock {
-  type: 'text' | 'image' | 'tool_use' | 'tool_result';
-  text?: string;
-  source?: { type: string; media_type: string; data: string };
-  name?: string;
-  id?: string;
-  input?: Record<string, unknown>;
-  tool_use_id?: string;
-  content?: string | ContentBlock[];
-  is_error?: boolean;
-}
-
-// 统一响应格式
-export interface ChatResponse {
-  id: string;
-  role: 'assistant';
-  content: ContentBlock[];
-  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use';
-  usage: {
-    input_tokens: number;
-    output_tokens: number;
-  };
-}
-
-// 流式 chunk
-export interface StreamChunk {
-  type: 'content_block_start' | 'content_block_delta' | 'content_block_stop' | 'message_stop';
-  index?: number;
-  delta?: TextDelta | InputJsonDelta;
-  content_block?: ContentBlock;
-}
-
-export interface TextDelta {
-  type: 'text_delta';
-  text: string;
-}
-
-export interface InputJsonDelta {
-  type: 'input_json_delta';
-  partial_json: string;
-}
-
-// 工具定义
-export interface Tool {
-  name: string;
-  description: string;
-  input_schema: Record<string, unknown>;
-}
-
-// Provider 接口
-export interface Provider {
-  readonly name: string;
-  listModels(): Promise<Model[]>;
-  chat(messages: Message[], options: ChatOptions): Promise<ChatResponse>;
-  stream(messages: Message[], options: ChatOptions): AsyncIterable<StreamChunk>;
-}
-```
-
-### 步骤 2：Anthropic Provider (providers/anthropic.ts)
-
-Anthropic 是基准格式，转换逻辑最简单：
-
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-import type { Provider, Message, ChatOptions, ChatResponse, StreamChunk } from './types';
-
-export class AnthropicProvider implements Provider {
-  readonly name = 'anthropic';
-  private client: Anthropic;
-
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+  if (!providerConfig) {
+    throw new Error(`Unknown provider: ${providerId}`);
   }
 
-  async listModels(): Promise<Model[]> {
-    // Anthropic 没有列出模型的 API，使用硬编码或 models.json
-    return [];
-  }
+  const apiKey = getApiKey(providerConfig.env);
 
-  async chat(messages: Message[], options: ChatOptions): Promise<ChatResponse> {
-    const response = await this.client.messages.create({
-      model: options.model,
-      max_tokens: options.maxTokens ?? 4096,
-      messages: messages as Anthropic.Messages.MessageParam[],
-      system: options.system,
-      tools: options.tools,
-    });
+  switch (providerConfig.npm) {
+    case '@ai-sdk/anthropic':
+      const anthropic = createAnthropic({ apiKey, baseURL: providerConfig.api });
+      return anthropic(modelId);
 
-    return {
-      id: response.id,
-      role: 'assistant',
-      content: response.content as ContentBlock[],
-      stop_reason: response.stop_reason,
-      usage: response.usage,
-    };
-  }
+    case '@ai-sdk/openai':
+      const openai = createOpenAI({ apiKey, baseURL: providerConfig.api });
+      return openai(modelId);
 
-  async *stream(messages: Message[], options: ChatOptions): AsyncIterable<StreamChunk> {
-    const stream = this.client.messages.stream({
-      model: options.model,
-      max_tokens: options.maxTokens ?? 4096,
-      messages: messages as Anthropic.Messages.MessageParam[],
-      system: options.system,
-      tools: options.tools,
-    });
+    case '@ai-sdk/openai-compatible':
+      const compatible = createOpenAICompatible({ apiKey, baseURL: providerConfig.api });
+      return compatible(modelId);
 
-    for await (const event of stream) {
-      // Anthropic SDK 已经处理了流式事件，直接转发
-      yield event as StreamChunk;
-    }
-  }
-}
-```
-
-### 步骤 3：OpenAI Provider (providers/openai.ts)
-
-需要转换 OpenAI 格式到 Anthropic 格式：
-
-```typescript
-import OpenAI from 'openai';
-import type { Provider, Message, ChatOptions, ChatResponse, StreamChunk, ContentBlock } from './types';
-
-export class OpenAIProvider implements Provider {
-  readonly name = 'openai';
-  private client: OpenAI;
-
-  constructor(apiKey: string) {
-    this.client = new OpenAI({ apiKey });
-  }
-
-  async listModels(): Promise<Model[]> {
-    const models = await this.client.models.list();
-    return models.data
-      .filter(m => m.id.includes('gpt'))
-      .map(m => ({
-        id: m.id,
-        displayName: m.id,
-        contextWindow: 128000, // 从 models.json 获取
-      }));
-  }
-
-  // 转换 Anthropic 格式消息到 OpenAI 格式
-  private toOpenAIMessages(messages: Message[]): OpenAI.Chat.ChatCompletionMessageParam[] {
-    return messages.map(msg => {
-      if (typeof msg.content === 'string') {
-        return { role: msg.role, content: msg.content };
-      }
-
-      // 处理多模态内容
-      const parts: OpenAI.Chat.ChatCompletionContentPart[] = msg.content.map(block => {
-        if (block.type === 'text') {
-          return { type: 'text', text: block.text! };
-        }
-        if (block.type === 'image') {
-          return {
-            type: 'image_url',
-            image_url: { url: `data:${block.source!.media_type};base64,${block.source!.data}` },
-          };
-        }
-        // tool_use 和 tool_result 需要特殊处理
-        // ...
-      });
-
-      return { role: msg.role, content: parts };
-    });
-  }
-
-  // 转换 OpenAI 响应到 Anthropic 格式
-  private toAnthropicResponse(response: OpenAI.Chat.ChatCompletion): ChatResponse {
-    const content: ContentBlock[] = [];
-
-    response.choices.forEach((choice, index) => {
-      if (choice.message.content) {
-        content.push({ type: 'text', text: choice.message.content });
-      }
-      if (choice.message.tool_calls) {
-        choice.message.tool_calls.forEach(tool => {
-          content.push({
-            type: 'tool_use',
-            id: tool.id,
-            name: tool.function.name,
-            input: JSON.parse(tool.function.arguments),
-          });
-        });
-      }
-    });
-
-    return {
-      id: response.id,
-      role: 'assistant',
-      content,
-      stop_reason: response.choices[0].finish_reason === 'tool_calls' ? 'tool_use' : 'end_turn',
-      usage: {
-        input_tokens: response.usage?.prompt_tokens ?? 0,
-        output_tokens: response.usage?.completion_tokens ?? 0,
-      },
-    };
-  }
-
-  async chat(messages: Message[], options: ChatOptions): Promise<ChatResponse> {
-    const response = await this.client.chat.completions.create({
-      model: options.model,
-      messages: this.toOpenAIMessages(messages),
-      max_tokens: options.maxTokens,
-      temperature: options.temperature,
-      tools: options.tools?.map(t => ({
-        type: 'function',
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema,
-        },
-      })),
-    });
-
-    return this.toAnthropicResponse(response);
-  }
-
-  async *stream(messages: Message[], options: ChatOptions): AsyncIterable<StreamChunk> {
-    const stream = await this.client.chat.completions.create({
-      model: options.model,
-      messages: this.toOpenAIMessages(messages),
-      max_tokens: options.maxTokens,
-      temperature: options.temperature,
-      tools: options.tools?.map(t => ({
-        type: 'function',
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema,
-        },
-      })),
-      stream: true,
-    });
-
-    // 混合模式处理
-    const toolCallBuffers: Map<number, { id: string; name: string; arguments: string }> = new Map();
-    let textIndex = 0;
-
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-
-      if (!delta) continue;
-
-      // 处理文本内容 - 实时转换
-      if (delta.content) {
-        yield {
-          type: 'content_block_delta',
-          index: textIndex,
-          delta: { type: 'text_delta', text: delta.content },
-        };
-      }
-
-      // 处理工具调用 - 缓冲
-      if (delta.tool_calls) {
-        for (const toolCall of delta.tool_calls) {
-          const index = toolCall.index;
-
-          if (!toolCallBuffers.has(index)) {
-            toolCallBuffers.set(index, {
-              id: toolCall.id ?? '',
-              name: toolCall.function?.name ?? '',
-              arguments: '',
-            });
-
-            // 发送 content_block_start
-            yield {
-              type: 'content_block_start',
-              index: index + 1, // 假设文本是 index 0
-              content_block: {
-                type: 'tool_use',
-                id: toolCall.id,
-                name: toolCall.function?.name,
-              },
-            };
-          }
-
-          const buffer = toolCallBuffers.get(index)!;
-          if (toolCall.function?.arguments) {
-            buffer.arguments += toolCall.function.arguments;
-          }
-        }
-      }
-    }
-
-    // 流结束，发送完整的 tool_use
-    for (const [index, buffer] of toolCallBuffers) {
-      yield {
-        type: 'content_block_delta',
-        index: index + 1,
-        delta: {
-          type: 'input_json_delta',
-          partial_json: buffer.arguments,
-        },
-      };
-      yield {
-        type: 'content_block_stop',
-        index: index + 1,
-      };
-    }
-
-    yield { type: 'message_stop' };
-  }
-}
-```
-
-### 步骤 4：Provider 工厂 (providers/index.ts)
-
-```typescript
-import type { Provider } from './types';
-import { AnthropicProvider } from './anthropic';
-import { OpenAIProvider } from './openai';
-import { GeminiProvider } from './gemini';
-
-export type ProviderName = 'anthropic' | 'openai' | 'gemini';
-
-export function createProvider(
-  name: ProviderName,
-  apiKey: string
-): Provider {
-  switch (name) {
-    case 'anthropic':
-      return new AnthropicProvider(apiKey);
-    case 'openai':
-      return new OpenAIProvider(apiKey);
-    case 'gemini':
-      return new GeminiProvider(apiKey);
     default:
-      throw new Error(`Unknown provider: ${name}`);
+      throw new Error(`Unsupported SDK: ${providerConfig.npm}`);
   }
 }
 
-export { type Provider, type Message, type ChatOptions, type ChatResponse, type StreamChunk } from './types';
-```
-
-### 步骤 5：同步 models.json (models/sync.ts)
-
-```typescript
-import { writeFileSync } from 'fs';
-import { join } from 'path';
-
-const MODELS_DEV_URL = 'https://models.dev/api.json';
-
-interface ModelsDevData {
-  [provider: string]: {
-    models: {
-      [modelId: string]: {
-        name: string;
-        context_length: number;
-        supports_vision?: boolean;
-        supports_tools?: boolean;
-      };
-    };
-  };
-}
-
-async function syncModels() {
-  const response = await fetch(MODELS_DEV_URL);
-  const data: ModelsDevData = await response.json();
-
-  // 转换为我们需要的格式
-  const models: Record<string, Model[]> = {};
-
-  for (const [provider, providerData] of Object.entries(data)) {
-    models[provider] = Object.entries(providerData.models).map(([id, model]) => ({
-      id,
-      displayName: model.name,
-      contextWindow: model.context_length,
-      supportsVision: model.supports_vision,
-      supportsTools: model.supports_tools,
-    }));
+function getApiKey(envNames: string[]): string {
+  for (const name of envNames) {
+    const key = process.env[name];
+    if (key) return key;
   }
-
-  writeFileSync(
-    join(__dirname, 'models.json'),
-    JSON.stringify(models, null, 2)
-  );
-
-  console.log('Models synced successfully');
+  throw new Error(`Missing API key. Set one of: ${envNames.join(', ')}`);
 }
-
-syncModels();
 ```
 
-### 步骤 6：Agent 修改
+### 步骤 2：修改 Agent (agent/agent.ts)
 
-Agent 接收 Provider 实例，不再直接依赖 Anthropic SDK：
+Agent 通过构造函数接收 model，不在内部创建：
 
 ```typescript
-import type { Provider, Message, ChatOptions } from '../providers';
+import { streamText, type LanguageModel } from 'ai';
+import { toCoreMessages } from '../session/convert.js';
+import { toToolSet } from './convert.js';
 
 export class Agent {
-  constructor(private provider: Provider) {}
+  constructor(
+    private model: LanguageModel,
+    private toolExecutor: ToolExecutor,
+  ) {}
 
-  async run(messages: Message[], options: ChatOptions) {
-    const response = await this.provider.chat(messages, options);
+  async *run(message: string, messages: Message[], options: AgentOptions = {}) {
+    const result = streamText({
+      model: this.model,
+      messages: toCoreMessages([...messages, { role: 'user', content: message }]),
+      tools: toToolSet(this.toolExecutor.getDefinitions(options.enabledTools)),
+      maxTokens: 4096,
+    });
 
-    // 处理响应...
-    if (response.stop_reason === 'tool_use') {
-      // 执行工具调用
-      // 递归调用
-    }
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta':
+          yield { type: 'content', delta: part.text };
+          break;
 
-    return response;
-  }
+        case 'reasoning':
+          yield { type: 'thinking', delta: part.text };
+          break;
 
-  async *stream(messages: Message[], options: ChatOptions) {
-    for await (const chunk of this.provider.stream(messages, options)) {
-      yield chunk;
+        case 'tool-call':
+          const result = await this.toolExecutor.execute(part.toolName, part.args);
+          // 处理结果...
+          break;
+
+        case 'finish':
+          yield { type: 'done', usage: part.usage };
+          break;
+      }
     }
   }
 }
 ```
+
+### 步骤 3：修改 Session/路由层
+
+在处理请求时创建 model 并注入 Agent：
+
+```typescript
+import { createModel } from '../providers/factory.js';
+
+// 处理聊天请求
+async function handleChat(req: Request) {
+  const { provider, model: modelId, message } = await req.json();
+
+  // 创建 model 实例
+  const model = createModel(provider, modelId);
+
+  // 创建 Agent（或从池中获取）
+  const agent = new Agent(model, toolRegistry);
+
+  // 执行
+  return agent.run(message, messages);
+}
+```
+
+### 步骤 4：消息转换 (session/convert.ts)
+
+由 Session 模块负责将内部 Message 转换为 AI SDK CoreMessage：
+
+```typescript
+import { type CoreMessage } from 'ai';
+import type { Message } from './types.js';
+
+export function toCoreMessages(messages: Message[]): CoreMessage[] {
+  return messages.map(msg => {
+    if (typeof msg.content === 'string') {
+      return { role: msg.role, content: msg.content };
+    }
+
+    // 处理 tool_use / tool_result
+    // ...
+  });
+}
+```
+
+### 步骤 5：工具转换 (agent/convert.ts)
+
+由 Agent 模块负责将 ToolDefinition 转换为 AI SDK ToolSet：
+
+```typescript
+import { type ToolSet } from 'ai';
+import { z } from 'zod';
+import type { ToolDefinition } from '../tools/types.js';
+
+export function toToolSet(tools: ToolDefinition[]): ToolSet {
+  // 转换 TypeBox schema 到 zod schema
+}
+```
+
+### 步骤 6：删除旧代码
+
+- 删除 `providers/anthropic.ts`
+- 删除 `providers/types.ts` 中不再使用的类型
+- 新增 `session/convert.ts`
+- 新增 `agent/convert.ts`
+
+## AI SDK fullStream 事件类型
+
+| 事件类型 | 说明 |
+|---------|------|
+| `text-delta` | 文本增量，`part.text` |
+| `reasoning` | 思考过程，`part.text` |
+| `tool-call` | 工具调用，`part.toolCallId`, `part.toolName`, `part.args` |
+| `error` | 错误，`part.error` |
+| `finish` | 完成，`part.usage`, `part.finishReason` |
 
 ## 测试计划
 
-1. **单元测试**
-   - 每个 Provider 的格式转换逻辑
-   - 流式响应的缓冲和转换
-
-2. **集成测试**
-   - 端到端对话流程
-   - 工具调用流程
-
-3. **兼容性测试**
-   - 确保现有 Agent 行为不变
-   - 确保前端无需修改
-
-## 依赖
-
-- `@anthropic-ai/sdk` - Anthropic SDK
-- `openai` - OpenAI SDK
-- `@google/generative-ai` - Google Gemini SDK
+1. **格式转换测试** - 确保消息和工具转换正确
+2. **集成测试** - 各 provider API 调用
+3. **回归测试** - 确保功能正常
 
 ## 风险和缓解
 
 | 风险 | 缓解措施 |
 |------|---------|
-| 不同模型能力差异 | 在 models.json 中标记支持的功能 |
-| 流式响应格式差异 | 使用混合模式，缓冲 tool_use |
-| API 限流差异 | 在 Provider 层实现重试逻辑 |
+| AI SDK 版本更新 | 锁定版本号 |
+| 格式转换复杂度 | 写单元测试覆盖 |

@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline';
-import { type Static, Type } from '@sinclair/typebox';
+import { z } from 'zod';
 import { spawn } from 'child_process';
 import { readFileSync, statSync } from 'fs';
 import path from 'path';
@@ -15,21 +15,17 @@ import {
 } from './truncate.js';
 import { ValidationError, InternalError, ToolErrors } from '../errors/index.js';
 
-const grepSchema = Type.Object({
-  pattern: Type.String({ description: 'Search pattern (regex or literal string)' }),
-  path: Type.Optional(Type.String({ description: 'Directory or file to search (default: current directory)' })),
-  glob: Type.Optional(Type.String({ description: "Filter files by glob pattern, e.g. '*.ts' or '**/*.spec.ts'" })),
-  ignoreCase: Type.Optional(Type.Boolean({ description: 'Case-insensitive search (default: false)' })),
-  literal: Type.Optional(
-    Type.Boolean({ description: 'Treat pattern as literal string instead of regex (default: false)' }),
-  ),
-  context: Type.Optional(
-    Type.Number({ description: 'Number of lines to show before and after each match (default: 0)' }),
-  ),
-  limit: Type.Optional(Type.Number({ description: 'Maximum number of matches to return (default: 100)' })),
+const grepSchema = z.object({
+  pattern: z.string().describe('Search pattern (regex or literal string)'),
+  path: z.string().describe('Directory or file to search (default: current directory)').optional(),
+  glob: z.string().describe("Filter files by glob pattern, e.g. '*.ts' or '**/*.spec.ts'").optional(),
+  ignoreCase: z.boolean().describe('Case-insensitive search (default: false)').optional(),
+  literal: z.boolean().describe('Treat pattern as literal string instead of regex (default: false)').optional(),
+  context: z.number().describe('Number of lines to show before and after each match (default: 0)').optional(),
+  limit: z.number().describe('Maximum number of matches to return (default: 100)').optional(),
 });
 
-export type GrepToolInput = Static<typeof grepSchema>;
+export type GrepToolInput = z.infer<typeof grepSchema>;
 
 const DEFAULT_LIMIT = 100;
 

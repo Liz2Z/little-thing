@@ -37,6 +37,9 @@ export const ConfigErrors = {
 
 export const InternalErrors = {
   ERROR: ['INTERNAL-1001', 500, '服务器内部错误'] as const,
+  UNKNOWN_PROVIDER: ['INTERNAL-1002', 500, 'Unknown provider'] as const,
+  UNSUPPORTED_SDK: ['INTERNAL-1003', 500, 'Unsupported SDK'] as const,
+  MISSING_API_KEY: ['INTERNAL-1004', 500, 'Missing API key'] as const,
 };
 
 export type ErrorTuple = readonly [code: string, status: number, message: string];

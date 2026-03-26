@@ -1,8 +1,9 @@
-import { randomUUID } from "crypto";
-import type { AnthropicProvider } from "../providers/anthropic.js";
-import type { Message } from "../session/types.js";
-import type { ToolDefinition } from "../providers/types.js";
-import type { ToolExecutor } from "../tools/registry.js";
+import { randomUUID } from 'node:crypto';
+import { streamText } from 'ai';
+import type { Message } from '../session/types.js';
+import type { AnyTool } from '../tools/types.js';
+import type { ToolExecutor } from '../tools/registry.js';
+import { toCoreMessages } from '../session/convert.js';
 import {
   AgentEventType,
   EventStatus,
@@ -17,14 +18,35 @@ import {
   type AgentCompleteEvent,
   type AgentErrorEvent,
   type AgentAbortEvent,
-} from "./types.js";
-import { createAgentRunContext } from "./context.js";
+} from './types.js';
+import { createAgentRunContext } from './context.js';
+
+/**
+ * 将内部工具定义转换为 AI SDK 的 ToolSet 格式
+ */
+function toToolSet(tools: AnyTool[]): Record<string, any> {
+  const toolSet: Record<string, any> = {};
+
+  for (const tool of tools) {
+    toolSet[tool.name] = {
+      description: tool.description,
+      parameters: tool.parameters,
+      execute: async (args: any) => {
+        const result = await tool.execute(`tool_${Date.now()}`, args);
+        const textContent = result.content.find(c => c.type === 'text');
+        return textContent?.text ?? JSON.stringify(result.content);
+      },
+    };
+  }
+
+  return toolSet;
+}
 
 export class Agent {
   private activeRuns: Map<string, AgentRunContext> = new Map();
 
   constructor(
-    private provider: AnthropicProvider,
+    private model: any,
     private toolExecutor: ToolExecutor,
   ) {}
 
@@ -52,7 +74,7 @@ export class Agent {
       options.enabledTools ||
         this.toolExecutor
           .getAllDefinitions()
-          .map((t: ToolDefinition) => t.name),
+          .map((t: AnyTool) => t.name),
       null,
       options.runId,
     );
@@ -71,7 +93,7 @@ export class Agent {
         ...messages,
         {
           id: `msg_${randomUUID()}`,
-          role: "user",
+          role: 'user',
           content: message,
           timestamp: new Date().toISOString(),
         },
@@ -82,7 +104,7 @@ export class Agent {
           yield this.createEvent<AgentAbortEvent>(ctx, {
             type: AgentEventType.Abort,
             status: EventStatus.Completed,
-            reason: "User requested abort",
+            reason: 'User requested abort',
             iteration: ctx.iteration,
           });
           return;
@@ -92,63 +114,91 @@ export class Agent {
 
         const tools = ctx.enabled_tools
           .map((name) => this.toolExecutor.getDefinition(name))
-          .filter((t): t is ToolDefinition => t !== undefined);
+          .filter((t): t is AnyTool => t !== undefined);
 
-        // 收集流式响应
-        let thinkingContent = "";
-        let responseContent = "";
-        const collectedToolUses: Array<{ id: string; name: string; input: unknown }> = [];
-        let finalUsage: { input_tokens: number; output_tokens: number } | undefined;
-        let finalStopReason: string | undefined;
+        // 使用 AI SDK 的 streamText
+        const result = streamText({
+          model: this.model,
+          messages: toCoreMessages(messages),
+          tools: toToolSet(tools),
+        });
+
+        // 收集工具调用和内容
+        const toolCalls: Array<{ id: string; name: string; args: unknown }> = [];
+        let thinkingContent = '';
+        let responseContent = '';
+        let finalUsage: { promptTokens: number; completionTokens: number } | undefined;
+        let finalFinishReason: string | undefined;
 
         // 处理流式响应
-        for await (const chunk of this.provider.chatWithTools(
-          messages,
-          tools,
-          options.model,
-        )) {
+        for await (const part of result.fullStream) {
           if (ctx.isAborted() || options.abortSignal?.aborted) {
             yield this.createEvent<AgentAbortEvent>(ctx, {
               type: AgentEventType.Abort,
               status: EventStatus.Completed,
-              reason: "User requested abort",
+              reason: 'User requested abort',
               iteration: ctx.iteration,
             });
             return;
           }
 
-          if (chunk.type === "thinking_delta") {
-            thinkingContent += chunk.delta || "";
-            yield this.createEvent<AgentThinkingEvent>(ctx, {
-              type: AgentEventType.Thinking,
-              status: EventStatus.Start,
-              content: chunk.delta || "",  // 发送增量
-              iteration: ctx.iteration,
-            });
-          } else if (chunk.type === "content_delta") {
-            responseContent += chunk.delta || "";
-            yield this.createEvent<AgentContentEvent>(ctx, {
-              type: AgentEventType.Content,
-              status: EventStatus.Pending,
-              content: chunk.delta || "",  // 发送增量
-              iteration: ctx.iteration,
-            });
-          } else if (chunk.type === "tool_use" && chunk.toolUse) {
-            collectedToolUses.push(chunk.toolUse);
-          } else if (chunk.type === "done" && chunk.response) {
-            finalUsage = chunk.response.usage;
-            finalStopReason = chunk.response.stop_reason;
-            // 补全最终内容
-            if (chunk.response.content) {
-              responseContent = chunk.response.content;
-            }
-            if (chunk.response.thinking) {
-              thinkingContent = chunk.response.thinking;
-            }
+          switch (part.type) {
+            case 'text-delta':
+              responseContent += part.text;
+              yield this.createEvent<AgentContentEvent>(ctx, {
+                type: AgentEventType.Content,
+                status: EventStatus.Pending,
+                content: part.text,
+                iteration: ctx.iteration,
+              });
+              break;
+
+            case 'reasoning-delta':
+              thinkingContent += (part as any).textDelta || '';
+              yield this.createEvent<AgentThinkingEvent>(ctx, {
+                type: AgentEventType.Thinking,
+                status: EventStatus.Start,
+                content: (part as any).textDelta || '',
+                iteration: ctx.iteration,
+              });
+              break;
+
+            case 'tool-call':
+              if ('toolName' in part && 'toolCallId' in part) {
+                toolCalls.push({
+                  id: part.toolCallId,
+                  name: part.toolName,
+                  args: (part as any).args || {},
+                });
+              }
+              break;
+
+            case 'tool-result':
+              // 工具结果会在后面处理
+              break;
+
+            case 'finish':
+              if ('totalUsage' in part) {
+                finalUsage = (part as any).totalUsage;
+              }
+              if ('finishReason' in part) {
+                finalFinishReason = (part as any).finishReason;
+              }
+              break;
+
+            case 'error':
+              yield this.createEvent<AgentErrorEvent>(ctx, {
+                type: AgentEventType.Error,
+                status: EventStatus.Failed,
+                error: (part as any).error?.message || 'Unknown error',
+                error_type: AgentErrorType.LlmError,
+                iteration: ctx.iteration,
+              });
+              return;
           }
         }
 
-        // Thinking 完成
+        // 完成 thinking 事件
         if (thinkingContent) {
           yield this.createEvent<AgentThinkingEvent>(ctx, {
             type: AgentEventType.Thinking,
@@ -158,13 +208,14 @@ export class Agent {
           });
         }
 
-        if (collectedToolUses.length > 0) {
-          for (const toolUse of collectedToolUses) {
+        // 如果有工具调用，执行工具
+        if (toolCalls.length > 0) {
+          for (const toolCall of toolCalls) {
             if (ctx.isAborted() || options.abortSignal?.aborted) {
               yield this.createEvent<AgentAbortEvent>(ctx, {
                 type: AgentEventType.Abort,
                 status: EventStatus.Completed,
-                reason: "User requested abort during tool execution",
+                reason: 'User requested abort during tool execution',
                 iteration: ctx.iteration,
               });
               return;
@@ -173,9 +224,9 @@ export class Agent {
             yield this.createEvent<ToolUseEvent>(ctx, {
               type: AgentEventType.ToolUse,
               status: EventStatus.Start,
-              tool_use_id: toolUse.id,
-              tool_name: toolUse.name,
-              input: toolUse.input,
+              tool_use_id: toolCall.id,
+              tool_name: toolCall.name,
+              input: toolCall.args,
               iteration: ctx.iteration,
             });
 
@@ -184,35 +235,33 @@ export class Agent {
 
             try {
               result = await this.toolExecutor.execute(
-                toolUse.name,
-                toolUse.input,
+                toolCall.name,
+                toolCall.args as Record<string, unknown>,
               );
             } catch (error) {
               result = {
                 success: false,
-                error: error instanceof Error ? error.message : "Unknown error",
+                error: error instanceof Error ? error.message : 'Unknown error',
               };
             }
             const duration = Date.now() - startTime;
 
             yield this.createEvent<ToolUseEvent>(ctx, {
               type: AgentEventType.ToolUse,
-              status: result.success
-                ? EventStatus.Completed
-                : EventStatus.Failed,
-              tool_use_id: toolUse.id,
-              tool_name: toolUse.name,
-              input: toolUse.input,
+              status: result.success ? EventStatus.Completed : EventStatus.Failed,
+              tool_use_id: toolCall.id,
+              tool_name: toolCall.name,
+              input: toolCall.args,
               iteration: ctx.iteration,
               result: result.success ? result.output : undefined,
               error: result.success ? undefined : result.error,
               duration_ms: duration,
             });
 
-            messages = this.addToolResultToMessages(messages, toolUse, result);
+            messages = this.addToolResultToMessages(messages, toolCall, result);
           }
         } else {
-          // Content 完成
+          // 完成 content 事件
           if (responseContent) {
             yield this.createEvent<AgentContentEvent>(ctx, {
               type: AgentEventType.Content,
@@ -224,13 +273,13 @@ export class Agent {
 
           const assistantMessage: Message = {
             id: `msg_${randomUUID()}`,
-            role: "assistant",
+            role: 'assistant',
             content: responseContent,
             timestamp: new Date().toISOString(),
           };
           messages.push(assistantMessage);
 
-          const stopReason = this.mapStopReason(finalStopReason);
+          const stopReason = this.mapStopReason(finalFinishReason);
 
           yield this.createEvent<AgentCompleteEvent>(ctx, {
             type: AgentEventType.Complete,
@@ -238,7 +287,12 @@ export class Agent {
             final_content: responseContent,
             total_iterations: ctx.iteration + 1,
             stop_reason: stopReason,
-            usage: finalUsage,
+            usage: finalUsage
+              ? {
+                  input_tokens: finalUsage.promptTokens,
+                  output_tokens: finalUsage.completionTokens,
+                }
+              : undefined,
           });
 
           return;
@@ -248,7 +302,7 @@ export class Agent {
       yield this.createEvent<AgentErrorEvent>(ctx, {
         type: AgentEventType.Error,
         status: EventStatus.Failed,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
         error_type: AgentErrorType.Unknown,
         iteration: ctx.iteration,
       });
@@ -259,13 +313,13 @@ export class Agent {
 
   private mapStopReason(reason?: string): AgentStopReason {
     switch (reason) {
-      case "end_turn":
+      case 'stop':
         return AgentStopReason.EndTurn;
-      case "tool_use":
+      case 'tool-calls':
         return AgentStopReason.ToolUse;
-      case "max_tokens":
+      case 'length':
         return AgentStopReason.MaxTokens;
-      case "stop_sequence":
+      case 'content-filter':
         return AgentStopReason.StopSequence;
       default:
         return AgentStopReason.EndTurn;
@@ -276,7 +330,7 @@ export class Agent {
     ctx: AgentRunContext,
     event: Omit<
       T,
-      "run_id" | "seq" | "span_id" | "parent_span_id" | "timestamp"
+      'run_id' | 'seq' | 'span_id' | 'parent_span_id' | 'timestamp'
     >,
   ): T {
     return {
@@ -291,18 +345,18 @@ export class Agent {
 
   private addToolResultToMessages(
     messages: Message[],
-    toolUse: { id: string; name: string; input: unknown },
+    toolCall: { id: string; name: string; args: unknown },
     result: { success: boolean; output?: string; error?: string },
   ): Message[] {
     const toolUseMessage: Message = {
       id: `msg_${randomUUID()}`,
-      role: "assistant",
+      role: 'assistant',
       content: [
         {
-          type: "tool_use",
-          id: toolUse.id,
-          name: toolUse.name as any,
-          input: toolUse.input as any,
+          type: 'tool_use',
+          id: toolCall.id,
+          name: toolCall.name as any,
+          input: toolCall.args as any,
         },
       ],
       timestamp: new Date().toISOString(),
@@ -310,12 +364,12 @@ export class Agent {
 
     const toolResultMessage: Message = {
       id: `msg_${randomUUID()}`,
-      role: "user",
+      role: 'user',
       content: [
         {
-          type: "tool_result",
-          tool_use_id: toolUse.id,
-          content: result.success ? result.output || "" : result.error || "",
+          type: 'tool_result',
+          tool_use_id: toolCall.id,
+          content: result.success ? result.output || '' : result.error || '',
           is_error: !result.success,
         },
       ],

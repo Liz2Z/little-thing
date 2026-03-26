@@ -1,4 +1,4 @@
-import type { Static, TSchema } from '@sinclair/typebox';
+import type { ZodType } from 'zod';
 
 export interface TextContent {
   type: 'text';
@@ -16,14 +16,14 @@ export interface ToolExecutionResult<TDetails = any> {
   details?: TDetails;
 }
 
-export interface ToolDefinition<TParameters extends TSchema = TSchema, TDetails = any> {
+export interface ToolDefinition<T extends ZodType = ZodType, TDetails = any> {
   name: string;
   label: string;
   description: string;
-  parameters: TParameters;
+  parameters: T;
   execute: (
     toolCallId: string,
-    params: Static<TParameters>,
+    params: T['_output'],
     signal?: AbortSignal,
   ) => Promise<ToolExecutionResult<TDetails>>;
 }
@@ -32,7 +32,7 @@ export interface AnyTool {
   name: string;
   label: string;
   description: string;
-  parameters: TSchema;
+  parameters: ZodType;
   execute: (
     toolCallId: string,
     params: any,
@@ -49,37 +49,4 @@ export function isTextContent(content: TextContent | ImageContent): content is T
 export function getTextContent(result: ToolExecutionResult): string {
   const textContent = result.content.find(isTextContent);
   return textContent?.text ?? '';
-}
-
-export function toolToProviderFormat(tool: AnyTool): {
-  name: string;
-  description: string;
-  parameters: Record<string, {
-    type: string;
-    description?: string;
-    required?: boolean;
-  }>;
-} {
-  const properties: Record<string, { type: string; description?: string; required?: boolean }> = {};
-  const required: string[] = [];
-  
-  const params = tool.parameters.properties as Record<string, { type: string; description?: string }>;
-  
-  for (const [key, value] of Object.entries(params)) {
-    properties[key] = {
-      type: value.type || 'string',
-      description: value.description,
-    };
-  }
-  
-  const requiredFields = tool.parameters.required as string[] | undefined;
-  if (requiredFields) {
-    required.push(...requiredFields);
-  }
-  
-  return {
-    name: tool.name,
-    description: tool.description,
-    parameters: properties,
-  };
 }
