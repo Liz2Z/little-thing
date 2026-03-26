@@ -5,7 +5,6 @@ import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
 import { math } from '@streamdown/math';
 import type { AgentRunState } from '@/lib/agent-types';
-import { cn } from '@/lib/utils';
 
 type Message = SessionsGetResponse['session']['messages'][number];
 import { ScrollArea } from '@/components/ui/scroll-area';

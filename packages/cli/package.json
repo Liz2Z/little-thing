@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "bun test __tests__",
     "test:watch": "bun test __tests__ --watch"
   },

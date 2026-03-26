@@ -13,6 +13,7 @@
   },
   "scripts": {
     "generate": "cd ../server && bun run generate:openapi && cd ../sdk && openapi-ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc"
   },
   "devDependencies": {

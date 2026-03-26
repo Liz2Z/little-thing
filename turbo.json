@@ -27,6 +27,12 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [],
+      "cache": true,
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "package.json", "tsconfig.json"]
     }
   }
 }
