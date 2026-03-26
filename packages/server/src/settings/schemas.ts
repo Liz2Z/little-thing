@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const providerSchema = z.object({
   name: z.string(),
@@ -16,38 +16,45 @@ export const llmSchema = z.object({
   apiKey: z.string(),
   timeout: z.number().min(1000).max(120000).optional(),
   maxRetries: z.number().min(0).max(5).optional(),
+  thinkingEnabled: z.boolean().default(false),
+  thinkingBudgetTokens: z
+    .number()
+    .min(1000)
+    .max(100000)
+    .default(16000)
+    .optional(),
 });
 
 export const serverSchema = z.object({
   port: z.coerce.number().min(1).max(65535).default(3000),
-  host: z.string().default('localhost'),
+  host: z.string().default("localhost"),
 });
 
 export const loggingSchema = z.object({
-  level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  format: z.enum(['text', 'json']).default('text'),
+  level: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  format: z.enum(["text", "json"]).default("text"),
 });
 
 export const settingsSchema = z.object({
-  version: z.string().optional().default('1.0.0'),
+  version: z.string().optional().default("1.0.0"),
   llm: llmSchema.default({
-    provider: 'zhipu-coding-plan',
-    model: 'glm-4.7',
-    baseUrl: 'https://open.bigmodel.cn/api/anthropic',
-    apiKey: '',
+    provider: "zhipu-coding-plan",
+    model: "glm-4.7",
+    baseUrl: "https://open.bigmodel.cn/api/anthropic",
+    apiKey: "",
     timeout: 30000,
     maxRetries: 3,
+    thinkingEnabled: false,
+    thinkingBudgetTokens: 16000,
   }),
   providers: z.record(z.string(), providerSchema).default({}),
   server: serverSchema.default({
     port: 3000,
-    host: 'localhost',
+    host: "localhost",
   }),
   logging: loggingSchema.default({
-    level: 'info',
-    format: 'text',
+    level: "info",
+    format: "text",
   }),
   ui: z.record(z.string(), z.unknown()).default({}),
 });
-
-

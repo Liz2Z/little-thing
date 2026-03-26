@@ -6,6 +6,11 @@ export interface ProviderConfig {
   model: string;
   timeout?: number;
   maxRetries?: number;
+  /** 启用扩展思考模式 */
+  thinking?: {
+    enabled: boolean;
+    budget_tokens?: number;
+  };
 }
 
 export interface ChatCompletionRequest {
@@ -14,10 +19,23 @@ export interface ChatCompletionRequest {
   stream?: boolean;
   max_tokens?: number;
   tools?: ToolDefinition[];
+  thinking?: {
+    type: "enabled";
+    budget_tokens?: number;
+  };
+}
+
+/** 流式响应事件 */
+export interface StreamChunk {
+  type: 'content_delta' | 'thinking_delta' | 'tool_use' | 'done';
+  delta?: string;
+  toolUse?: { id: string; name: string; input: unknown };
+  response?: ChatCompletionResponse;
 }
 
 export interface ChatCompletionResponse {
   content: string;
+  thinking?: string;
   toolUses?: Array<{
     id: string;
     name: string;

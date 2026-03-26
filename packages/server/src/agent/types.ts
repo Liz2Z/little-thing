@@ -2,10 +2,10 @@
  * 事件状态枚举
  */
 export enum EventStatus {
-  Start = 'start',
-  Pending = 'pending',
-  Completed = 'completed',
-  Failed = 'failed',
+  Start = "start",
+  Pending = "pending",
+  Completed = "completed",
+  Failed = "failed",
 }
 
 /**
@@ -13,43 +13,43 @@ export enum EventStatus {
  */
 export enum AgentStopReason {
   /** 正常结束，LLM 决定回复用户 */
-  EndTurn = 'end_turn',
+  EndTurn = "end_turn",
   /** 需要调用工具 */
-  ToolUse = 'tool_use',
+  ToolUse = "tool_use",
   /** 达到最大 token 限制 */
-  MaxTokens = 'max_tokens',
+  MaxTokens = "max_tokens",
   /** 遇到停止序列 */
-  StopSequence = 'stop_sequence',
+  StopSequence = "stop_sequence",
   /** 用户主动终止 */
-  UserAbort = 'user_abort',
+  UserAbort = "user_abort",
   /** 发生错误 */
-  Error = 'error',
+  Error = "error",
   /** 超时 */
-  Timeout = 'timeout',
+  Timeout = "timeout",
 }
 
 /**
  * Agent 错误类型枚举
  */
 export enum AgentErrorType {
-  LlmError = 'llm_error',
-  ToolError = 'tool_error',
-  Timeout = 'timeout',
-  UserAbort = 'user_abort',
-  Unknown = 'unknown',
+  LlmError = "llm_error",
+  ToolError = "tool_error",
+  Timeout = "timeout",
+  UserAbort = "user_abort",
+  Unknown = "unknown",
 }
 
 /**
  * Agent 事件类型枚举
  */
 export enum AgentEventType {
-  Start = 'agent_start',
-  Thinking = 'agent_thinking',
-  Content = 'agent_content',
-  ToolUse = 'tool_use',
-  Complete = 'agent_complete',
-  Error = 'agent_error',
-  Abort = 'agent_abort',
+  Start = "agent_start",
+  Thinking = "agent_thinking",
+  Content = "agent_content",
+  ToolUse = "tool_use",
+  Complete = "agent_complete",
+  Error = "agent_error",
+  Abort = "agent_abort",
 }
 
 /**
@@ -126,7 +126,11 @@ export interface AgentContentEvent extends AgentEventBase {
 /** 工具调用事件 */
 export interface ToolUseEvent extends AgentEventBase {
   type: AgentEventType.ToolUse;
-  status: EventStatus.Start | EventStatus.Pending | EventStatus.Completed | EventStatus.Failed;
+  status:
+    | EventStatus.Start
+    | EventStatus.Pending
+    | EventStatus.Completed
+    | EventStatus.Failed;
   /** 工具调用 ID */
   tool_use_id: string;
   /** 工具名称 */
@@ -201,8 +205,10 @@ export interface AgentRunContext {
   run_id: string;
   /** 父级 Span ID（用于嵌套调用） */
   parent_span_id: string | null;
+  /** 当前 Span ID */
+  span_id: string;
   /** 当前序列号计数器 */
-  seq_counter: number;
+  seq: number;
   /** 当前迭代轮次 */
   iteration: number;
   /** 已启用的工具 */
@@ -212,9 +218,6 @@ export interface AgentRunContext {
 
   /** 生成下一个序列号 */
   nextSeq(): number;
-
-  /** 生成新的 Span ID */
-  newSpanId(): string;
 
   /** 创建子上下文（用于嵌套调用，共享 run_id） */
   createChildSpan(): AgentRunContext;

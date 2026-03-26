@@ -5,6 +5,7 @@ import type {
   ProviderConfig,
   ModelsResponse,
   ModelInfo,
+  StreamChunk,
 } from "./types.js";
 import type { Message } from "../session/types.js";
 import { InternalError, LlmErrors } from "../errors/index.js";
@@ -19,22 +20,35 @@ export class AnthropicProvider {
       baseUrl: settings.llm.baseUrl.get(),
       apiKey: settings.llm.apiKey.get(),
       model: settings.llm.model.get(),
+      thinking: {
+        enabled: settings.llm.thinkingEnabled.get(),
+        budget_tokens: settings.llm.thinkingBudgetTokens?.get(),
+      },
     };
   }
 
-  async chatWithTools(
+  async *chatWithTools(
     messages: Message[],
     tools?: ToolDefinition[],
     model?: string,
-  ): Promise<ChatCompletionResponse> {
+  ): AsyncGenerator<StreamChunk> {
     const requestBody: ChatCompletionRequest = {
       model: model || this.config.model,
       messages,
       max_tokens: 4096,
+      stream: true,
       tools: tools
         ? (this.convertToolsToAnthropicFormat(tools) as ToolDefinition[])
         : undefined,
     };
+
+    // 启用扩展思考模式
+    if (this.config.thinking?.enabled) {
+      requestBody.thinking = {
+        type: "enabled",
+        budget_tokens: this.config.thinking.budget_tokens,
+      };
+    }
 
     if (!this.config.apiKey) {
       throw new InternalError(LlmErrors.UNAUTHORIZED, {
@@ -54,7 +68,6 @@ export class AnthropicProvider {
         "Content-Type": "application/json",
         "x-api-key": this.config.apiKey,
         "anthropic-version": "2023-06-01",
-        // Support some proxies that use Authorization header
         Authorization: `Bearer ${this.config.apiKey}`,
       },
       body: JSON.stringify(requestBody),
@@ -69,7 +82,6 @@ export class AnthropicProvider {
         errorData = errorText;
       }
 
-      // Check for unauthorized specifically
       if (response.status === 401) {
         throw new InternalError(LlmErrors.UNAUTHORIZED, {
           status: 401,
@@ -83,49 +95,109 @@ export class AnthropicProvider {
       });
     }
 
-    const data = await response.json();
-
-    // Handle common error formats in 200 OK responses
-    // Standard Anthropic format
-    if (data.error || data.type === "error") {
+    if (!response.body) {
       throw new InternalError(LlmErrors.API_ERROR, {
-        status: response.status,
-        response: data.error || data,
-      });
-    }
-
-    // Zhipu API format: {code: number, msg: string, success: boolean}
-    if (data.code !== undefined && !data.success) {
-      throw new InternalError(LlmErrors.API_ERROR, {
-        status: data.code,
-        response: {
-          error: data.msg || data.message || "Unknown API error",
-          code: data.code,
-        },
+        message: "Response body is empty",
       });
     }
 
     const content: string[] = [];
+    const thinking: string[] = [];
     const toolUses: Array<{ id: string; name: string; input: unknown }> = [];
+    let currentToolUse: { id?: string; name?: string; input?: Record<string, unknown> } | null = null;
+    let usage: { input_tokens: number; output_tokens: number } | undefined;
+    let stopReason: string | undefined;
 
-    for (const item of data.content || []) {
-      if (item.type === "text") {
-        content.push(item.text);
-      } else if (item.type === "tool_use") {
-        toolUses.push({
-          id: item.id,
-          name: item.name,
-          input: item.input,
-        });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let firstChunk = true;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith("data: ")) continue;
+
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") continue;
+
+          // 调试：打印第一个 chunk
+          if (firstChunk) {
+            console.error("[DEBUG] First SSE chunk:", data.substring(0, 200));
+            firstChunk = false;
+          }
+
+          try {
+            const json = JSON.parse(data);
+
+            // 处理不同类型的流式事件
+            if (json.type === "content_block_start") {
+              if (json.content_block?.type === "thinking") {
+                // 开始思考块
+              } else if (json.content_block?.type === "tool_use") {
+                currentToolUse = { id: json.content_block.id, name: json.content_block.name, input: {} };
+              }
+            } else if (json.type === "content_block_delta") {
+              if (json.delta?.type === "thinking_delta") {
+                const text = json.delta.thinking || "";
+                thinking.push(text);
+                yield { type: "thinking_delta", delta: text };
+              } else if (json.delta?.type === "text_delta") {
+                const text = json.delta.text || "";
+                content.push(text);
+                yield { type: "content_delta", delta: text };
+              } else if (json.delta?.type === "input_json_delta" && currentToolUse) {
+                const partialJson = json.delta.partial_json || "";
+                try {
+                  const merged = { ...(currentToolUse.input || {}), ...JSON.parse(partialJson) };
+                  currentToolUse.input = merged;
+                } catch {
+                  // 部分JSON，等待更多数据
+                }
+              }
+            } else if (json.type === "content_block_stop") {
+              if (currentToolUse && currentToolUse.id && currentToolUse.name) {
+                toolUses.push({
+                  id: currentToolUse.id,
+                  name: currentToolUse.name,
+                  input: currentToolUse.input || {},
+                });
+                yield { type: "tool_use", toolUse: toolUses[toolUses.length - 1] };
+              }
+              currentToolUse = null;
+            } else if (json.type === "message_stop") {
+              // 消息结束
+            }
+          } catch {
+            // 忽略解析错误
+          }
+        }
       }
-    }
 
-    return {
-      content: content.join(""),
-      toolUses: toolUses.length > 0 ? toolUses : undefined,
-      usage: data.usage,
-      stop_reason: data.stop_reason,
-    };
+      // 获取最终的使用信息
+      // 注意：Anthropic 流式API会在最后的message_start事件中发送usage信息
+      // 这里我们假设usage信息在某个事件中，如果没有则使用默认值
+
+      yield {
+        type: "done",
+        response: {
+          content: content.join(""),
+          thinking: thinking.length > 0 ? thinking.join("") : undefined,
+          toolUses: toolUses.length > 0 ? toolUses : undefined,
+          usage,
+          stop_reason: stopReason,
+        },
+      };
+    } finally {
+      reader.releaseLock();
+    }
   }
 
   private convertToolsToAnthropicFormat(tools: ToolDefinition[]): unknown[] {

@@ -1,45 +1,40 @@
-import { randomUUID } from 'crypto';
-import type { AgentRunContext } from './types.js';
+import { randomUUID } from "crypto";
+import type { AgentRunContext } from "./types.js";
 
 export function createAgentRunContext(
   enabled_tools: string[],
   parent_span_id: string | null = null,
-  run_id?: string
+  run_id?: string,
 ): AgentRunContext {
-  const actual_run_id = run_id || randomUUID();
-  let seq = 0;
-  let aborted = false;
+  const actual_run_id = run_id || `run_${randomUUID()}`;
 
   return {
     run_id: actual_run_id,
+    span_id: `span_${randomUUID()}`,
     parent_span_id,
-    seq_counter: 0,
+    seq: 0,
     iteration: 0,
     enabled_tools,
-    aborted,
+    aborted: false,
 
     nextSeq(): number {
-      return ++seq;
-    },
-
-    newSpanId(): string {
-      return `${actual_run_id}-${++seq}`;
+      return ++this.seq;
     },
 
     createChildSpan(): AgentRunContext {
       return createAgentRunContext(
         this.enabled_tools,
-        this.newSpanId(),
-        this.run_id
+        this.span_id,
+        this.run_id,
       );
     },
 
     abort(): void {
-      aborted = true;
+      this.aborted = true;
     },
 
     isAborted(): boolean {
-      return aborted;
+      return this.aborted;
     },
   };
 }

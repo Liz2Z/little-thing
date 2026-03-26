@@ -448,18 +448,20 @@ function handleAgentEvent(
     }
 
     case AgentEventType.Content: {
-      if (!currentRunState) return currentRunState!;
+      const currentState = _get().agentRunState;
+      if (!currentState) return currentRunState!;
       const updated = {
-        ...currentRunState,
-        content: currentRunState.content + event.content,
+        ...currentState,
+        content: currentState.content + event.content,
       };
       set({ agentRunState: updated });
       return updated;
     }
 
     case AgentEventType.ToolUse: {
-      if (!currentRunState) return currentRunState!;
-      const toolCalls = new Map(currentRunState.toolCalls);
+      const currentState = _get().agentRunState;
+      if (!currentState) return currentRunState!;
+      const toolCalls = new Map(currentState.toolCalls);
       const existing = toolCalls.get(event.tool_use_id);
       if (existing) {
         toolCalls.set(event.tool_use_id, {
@@ -469,7 +471,7 @@ function handleAgentEvent(
       } else {
         toolCalls.set(event.tool_use_id, event);
       }
-      const updated = { ...currentRunState, toolCalls };
+      const updated = { ...currentState, toolCalls };
       set({ agentRunState: updated });
       return updated;
     }

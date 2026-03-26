@@ -24,6 +24,7 @@ export function ChatPage() {
   const sendMessage = useSessionStore((state) => state.sendMessage);
   const clearError = useSessionStore((state) => state.clearError);
   const isAgentRunning = useSessionStore((state) => state.isAgentRunning);
+  const agentRunState = useSessionStore((state) => state.agentRunState);
 
   const handleCreateSession = async () => {
     try {
@@ -123,7 +124,11 @@ export function ChatPage() {
               </header>
 
               <div className="flex-1 overflow-hidden">
-                <MessageList messages={activeSessionMessages} isStreaming={isAgentRunning} />
+                <MessageList
+                  messages={activeSessionMessages}
+                  isStreaming={isAgentRunning}
+                  agentRunState={agentRunState}
+                />
               </div>
 
               <ChatInput onSend={handleSendMessage} disabled={isAgentRunning} />
