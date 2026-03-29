@@ -1,8 +1,12 @@
 import { SessionStore } from './store.js';
-import type { Session, SessionMeta, Message } from './types.js';
+import type { Session, SessionMeta } from './session.schema.js';
+import type { Message } from './message.schema.js';
 import { Agent } from '../agent/agent.js';
-import { AgentEventType, EventStatus, AgentErrorType } from '../agent/types.js';
-import type { AgentEvent } from '../agent/types.js';
+import type {
+  AgentEvent,
+  AgentErrorEvent,
+  AgentCompleteEvent,
+} from '../agent/agent-events.schema.js';
 import type { ToolExecutor } from '../tools/registry.js';
 import type { LanguageModel } from 'ai';
 import { createModel } from '../providers/factory.js';
@@ -57,8 +61,6 @@ export class SessionService {
   }
 
   abort(runId: string): void {
-    // Agent 实例是动态创建的，暂时不支持 abort
-    // TODO: 可以通过维护活跃 Agent 映射来实现
   }
 
   async *chat(
@@ -68,26 +70,29 @@ export class SessionService {
   ): AsyncGenerator<AgentEvent> {
     const session = this.sessionStore.getSession(sessionId);
     if (!session) {
-      yield {
-        type: AgentEventType.Error,
-        status: EventStatus.Failed,
+      const errorEvent: AgentErrorEvent = {
+        type: 'agent_error',
+        status: 'failed',
         error: 'Session not found',
-        error_type: AgentErrorType.Unknown,
+        error_type: 'unknown',
         run_id: '',
         seq: 0,
         span_id: '',
         parent_span_id: null,
         timestamp: new Date().toISOString(),
-      } as AgentEvent;
+      };
+      yield errorEvent;
       return;
     }
 
-    // 使用会话配置的 provider 和 model，或者使用选项中提供的
-    const provider = options?.provider || session.meta.provider || 'anthropic';
-    const model = options?.model || session.meta.model || 'claude-3-5-sonnet-20241022';
+    const provider = options?.provider || session.meta.provider ;
+    const model = options?.model || session.meta.model ;
+
+    if (!provider || !model) {
+      throw new Error('Provider and model are required');
+    }
 
     try {
-      // 动态创建 Agent
       const agent = this.createAgent(provider, model);
 
       for await (const event of agent.run(message, session.messages, {
@@ -95,34 +100,34 @@ export class SessionService {
       })) {
         yield event;
 
-        if (event.type === AgentEventType.Complete || event.type === AgentEventType.Error) {
+        if (event.type === 'agent_complete' || event.type === 'agent_error') {
           this.sessionStore.addMessage(sessionId, {
             role: 'user',
-            content: message,
+            content: { type: 'text', text: message },
             timestamp: new Date().toISOString(),
           });
-          if (event.type === AgentEventType.Complete) {
+          if (event.type === 'agent_complete') {
             this.sessionStore.addMessage(sessionId, {
               role: 'assistant',
-              content: event.final_content,
+              content: { type: 'text', text: (event as AgentCompleteEvent).final_content },
               timestamp: new Date().toISOString(),
             });
           }
         }
       }
     } catch (error) {
-      yield {
-        type: AgentEventType.Error,
-        status: EventStatus.Failed,
+      const errorEvent: AgentErrorEvent = {
+        type: 'agent_error',
+        status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error',
-        error_type: AgentErrorType.Unknown,
+        error_type: 'unknown',
         run_id: '',
         seq: 0,
         span_id: '',
         parent_span_id: null,
         timestamp: new Date().toISOString(),
-      } as AgentEvent;
+      };
+      yield errorEvent;
     }
   }
 }
-

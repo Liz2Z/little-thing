@@ -330,7 +330,7 @@ app.post('/:id/messages',
 
     const message = {
       role: body.role,
-      content: body.content,
+      content: { type: 'text' as const, text: body.content },
       timestamp: body.timestamp || new Date().toISOString(),
     };
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { AgentRunContext } from "./types.js";
+import type { AgentRunContext } from "./agent-events.schema.js";
 
 export function createAgentRunContext(
   enabled_tools: string[],
