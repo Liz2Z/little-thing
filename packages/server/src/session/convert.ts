@@ -1,5 +1,5 @@
 import type { CoreMessage } from 'ai';
-import type { Message, MessageContent, TextContent, ToolUseContent, ToolResultContent } from './message.schema.js';
+import type { Message, MessageContent, TextContent, ToolUseContent, ToolResultContent } from './message.js';
 
 export function toCoreMessages(messages: Message[]): CoreMessage[] {
   return messages.map((msg) => convertMessage(msg));

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { streamText } from 'ai';
-import type { Message, ToolParamValue } from '../session/message.schema.js';
+import type { Message, ToolParamValue } from '../session/message.js';
 import type { AnyTool } from '../tools/types.js';
 import type { ToolExecutor } from '../tools/registry.js';
 import { toCoreMessages } from '../session/convert.js';

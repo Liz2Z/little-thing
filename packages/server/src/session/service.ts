@@ -1,6 +1,6 @@
 import { SessionStore } from './store.js';
 import type { Session, SessionMeta } from './session.schema.js';
-import type { Message } from './message.schema.js';
+import type { Message } from './message.js';
 import { Agent } from '../agent/agent.js';
 import type {
   AgentEvent,

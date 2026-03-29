@@ -1,6 +1,6 @@
 export { SessionService } from './service.js';
 export type { Session, SessionMeta } from './session.schema.js';
-export type { Message, MessageContent } from './message.schema.js';
+export type { Message, MessageContent } from './message.js';
 export { toCoreMessages } from './convert.js';
 
 import { SessionStore } from './store.js';

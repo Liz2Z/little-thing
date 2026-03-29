@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MessageSchema } from './message.schema.js';
+import { MessageSchema } from './message.js';
 
 export const SessionMetaSchema = z.object({
   id: z.string(),

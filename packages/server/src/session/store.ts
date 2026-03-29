@@ -1,6 +1,6 @@
 import { JsonStore, JsonlStore } from '../storage/index.js';
 import type { SessionMeta, SessionIndex, Session } from './session.schema.js';
-import type { Message } from './message.schema.js';
+import type { Message } from './message.js';
 import { settings } from '../settings';
 
 function generateId(): string {
