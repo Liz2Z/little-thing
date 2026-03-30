@@ -4,12 +4,11 @@
  * 使用真实 LLM API 和真实工具进行端到端测试。
  * 运行前需要确保 .env.test 中配置了有效的 API Key。
  *
- * 运行方式：bun test e2e/server/agent/agent-e2e.spec.ts
+ * 运行方式：NODE_ENV=test bun test e2e/server/agent/agent-e2e.spec.ts
  */
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { mkdtempSync, writeFileSync, rmSync } from "fs";
+import { join } from "path";
 import { tmpdir } from "os";
 
 import { Agent } from "../../../packages/server/src/agent/agent.js";
@@ -28,28 +27,6 @@ import type {
   AgentCompleteEvent,
   AgentErrorEvent,
 } from "../../../packages/server/src/agent/events.js";
-
-// 从 .env.test 加载环境变量
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const envTestPath = join(__dirname, "../../../packages/server/.env.test");
-
-function loadEnvTest() {
-  try {
-    const envContent = readFileSync(envTestPath, "utf-8");
-    for (const line of envContent.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#")) {
-        const [key, ...valueParts] = trimmed.split("=");
-        const value = valueParts.join("=").trim();
-        if (key && value) {
-          process.env[key] = value;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn(`Warning: Could not load .env.test: ${error}`);
-  }
-}
 
 /** 收集 Agent 运行的所有事件 */
 async function collectEvents(
@@ -82,7 +59,6 @@ describe("Agent E2E", () => {
   let tempDir: string;
 
   beforeAll(() => {
-    loadEnvTest();
     expect(process.env.ZHIPU_API_KEY).toBeTruthy();
 
     tempDir = mkdtempSync(join(tmpdir(), "agent-e2e-"));

@@ -8,3 +8,4 @@ playwright/.cache/
 .trae/
 .claude/
 .vscode/
+.env.test
