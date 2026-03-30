@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 const BOM = '\uFEFF';
 
 export function stripBom(content: string): { bom: string; text: string } {
@@ -35,12 +37,13 @@ export function normalizeForFuzzyMatch(content: string): string {
     .trim();
 }
 
-export interface FuzzyMatchResult {
-  found: boolean;
-  index: number;
-  matchLength: number;
-  contentForReplacement: string;
-}
+export const FuzzyMatchResultSchema = z.object({
+  found: z.boolean(),
+  index: z.number(),
+  matchLength: z.number(),
+  contentForReplacement: z.string(),
+});
+export type FuzzyMatchResult = z.infer<typeof FuzzyMatchResultSchema>;
 
 export function fuzzyFindText(content: string, searchText: string): FuzzyMatchResult {
   const exactIndex = content.indexOf(searchText);
@@ -106,10 +109,11 @@ export function fuzzyFindText(content: string, searchText: string): FuzzyMatchRe
   };
 }
 
-export interface DiffResult {
-  diff: string;
-  firstChangedLine?: number;
-}
+export const DiffResultSchema = z.object({
+  diff: z.string(),
+  firstChangedLine: z.number().optional(),
+});
+export type DiffResult = z.infer<typeof DiffResultSchema>;
 
 export function generateDiffString(oldContent: string, newContent: string): DiffResult {
   const oldLines = oldContent.split('\n');

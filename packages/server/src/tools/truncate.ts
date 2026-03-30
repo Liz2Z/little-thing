@@ -1,25 +1,29 @@
+import { z } from 'zod';
+
 export const DEFAULT_MAX_LINES = 2000;
 export const DEFAULT_MAX_BYTES = 50 * 1024;
 export const GREP_MAX_LINE_LENGTH = 500;
 
-export interface TruncationResult {
-  content: string;
-  truncated: boolean;
-  truncatedBy: 'lines' | 'bytes' | null;
-  totalLines: number;
-  totalBytes: number;
-  outputLines: number;
-  outputBytes: number;
-  lastLinePartial: boolean;
-  firstLineExceedsLimit: boolean;
-  maxLines: number;
-  maxBytes: number;
-}
+export const TruncationResultSchema = z.object({
+  content: z.string(),
+  truncated: z.boolean(),
+  truncatedBy: z.enum(['lines', 'bytes']).nullable(),
+  totalLines: z.number(),
+  totalBytes: z.number(),
+  outputLines: z.number(),
+  outputBytes: z.number(),
+  lastLinePartial: z.boolean(),
+  firstLineExceedsLimit: z.boolean(),
+  maxLines: z.number(),
+  maxBytes: z.number(),
+});
+export type TruncationResult = z.infer<typeof TruncationResultSchema>;
 
-export interface TruncationOptions {
-  maxLines?: number;
-  maxBytes?: number;
-}
+export const TruncationOptionsSchema = z.object({
+  maxLines: z.number().optional(),
+  maxBytes: z.number().optional(),
+});
+export type TruncationOptions = z.infer<typeof TruncationOptionsSchema>;
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) {

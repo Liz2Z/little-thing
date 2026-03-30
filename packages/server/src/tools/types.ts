@@ -1,21 +1,28 @@
+import { z } from 'zod';
 import type { ZodType } from 'zod';
 
-export interface TextContent {
-  type: 'text';
-  text: string;
-}
+export const TextContentSchema = z.object({
+  type: z.literal('text'),
+  text: z.string(),
+});
+export type TextContent = z.infer<typeof TextContentSchema>;
 
-export interface ImageContent {
-  type: 'image';
-  data: string;
-  mimeType: string;
-}
+export const ImageContentSchema = z.object({
+  type: z.literal('image'),
+  data: z.string(),
+  mimeType: z.string(),
+});
+export type ImageContent = z.infer<typeof ImageContentSchema>;
+
+export const ToolContentSchema = z.union([TextContentSchema, ImageContentSchema]);
+export type ToolContent = z.infer<typeof ToolContentSchema>;
 
 export interface ToolExecutionResult<TDetails = any> {
-  content: (TextContent | ImageContent)[];
+  content: ToolContent[];
   details?: TDetails;
 }
 
+// 含函数签名，保留 TS interface
 export interface ToolDefinition<T extends ZodType = ZodType, TDetails = any> {
   name: string;
   label: string;
@@ -28,6 +35,7 @@ export interface ToolDefinition<T extends ZodType = ZodType, TDetails = any> {
   ) => Promise<ToolExecutionResult<TDetails>>;
 }
 
+// 含函数签名，保留 TS interface
 export interface AnyTool {
   name: string;
   label: string;
@@ -42,7 +50,7 @@ export interface AnyTool {
 
 export type ToolName = 'ls' | 'read' | 'edit' | 'write' | 'grep';
 
-export function isTextContent(content: TextContent | ImageContent): content is TextContent {
+export function isTextContent(content: ToolContent): content is TextContent {
   return content.type === 'text';
 }
 

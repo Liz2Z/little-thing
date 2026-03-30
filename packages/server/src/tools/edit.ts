@@ -4,6 +4,7 @@ import { access as fsAccess, readFile as fsReadFile, writeFile as fsWriteFile } 
 import type { ToolDefinition } from './types.js';
 import {
   detectLineEnding,
+  DiffResultSchema,
   fuzzyFindText,
   generateDiffString,
   normalizeForFuzzyMatch,
@@ -46,11 +47,13 @@ const editSchema = z.object({
 
 export type EditToolInput = z.infer<typeof editSchema>;
 
-export interface EditToolDetails {
-  diff: string;
-  firstChangedLine?: number;
-}
+export const EditToolDetailsSchema = z.object({
+  diff: z.string(),
+  firstChangedLine: z.number().optional(),
+});
+export type EditToolDetails = z.infer<typeof EditToolDetailsSchema>;
 
+// DI 契约，保留 TS interface
 export interface EditOperations {
   readFile: (absolutePath: string) => Promise<Buffer>;
   writeFile: (absolutePath: string, content: string) => Promise<void>;

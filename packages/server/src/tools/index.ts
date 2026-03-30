@@ -46,12 +46,14 @@ export {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   formatSize,
-  type TruncationOptions,
-  type TruncationResult,
+  TruncationOptionsSchema,
+  TruncationResultSchema,
   truncateHead,
   truncateTail,
   truncateLine,
   GREP_MAX_LINE_LENGTH,
+  type TruncationOptions,
+  type TruncationResult,
 } from './truncate.js';
 
 export {
@@ -68,6 +70,8 @@ export {
   normalizeForFuzzyMatch,
   fuzzyFindText,
   generateDiffString,
+  FuzzyMatchResultSchema,
+  DiffResultSchema,
   type FuzzyMatchResult,
   type DiffResult,
 } from './edit-diff.js';
@@ -79,9 +83,16 @@ export type {
   ToolName,
   TextContent,
   ImageContent,
+  ToolContent,
 } from './types.js';
 
-export { isTextContent, getTextContent } from './types.js';
+export {
+  TextContentSchema,
+  ImageContentSchema,
+  ToolContentSchema,
+  isTextContent,
+  getTextContent,
+} from './types.js';
 
 export { ToolRegistry } from './registry.js';
 

@@ -3,7 +3,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import nodePath from 'path';
 import type { ToolDefinition, ToolExecutionResult } from './types.js';
 import { resolveToCwd } from './path-utils.js';
-import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
+import { DEFAULT_MAX_BYTES, formatSize, TruncationResultSchema, truncateHead } from './truncate.js';
 import { ValidationError, ForbiddenError } from '../errors/base.js';
 
 class ToolAbortedError extends ValidationError {
@@ -39,11 +39,13 @@ export type LsToolInput = z.infer<typeof lsSchema>;
 
 const DEFAULT_LIMIT = 500;
 
-export interface LsToolDetails {
-  truncation?: TruncationResult;
-  entryLimitReached?: number;
-}
+export const LsToolDetailsSchema = z.object({
+  truncation: TruncationResultSchema.optional(),
+  entryLimitReached: z.number().optional(),
+});
+export type LsToolDetails = z.infer<typeof LsToolDetailsSchema>;
 
+// DI 契约，保留 TS interface
 export interface LsOperations {
   exists: (absolutePath: string) => Promise<boolean> | boolean;
   stat: (absolutePath: string) => Promise<{ isDirectory: () => boolean }> | { isDirectory: () => boolean };

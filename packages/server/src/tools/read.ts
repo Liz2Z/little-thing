@@ -3,7 +3,7 @@ import { constants } from 'fs';
 import { access as fsAccess, readFile as fsReadFile } from 'fs/promises';
 import type { ToolDefinition, ToolExecutionResult, TextContent, ImageContent } from './types.js';
 import { resolveReadPath } from './path-utils.js';
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, TruncationResultSchema, type TruncationResult, truncateHead } from './truncate.js';
 import { ValidationError } from '../errors/base.js';
 
 class ToolAbortedError extends ValidationError {
@@ -26,10 +26,12 @@ const readSchema = z.object({
 
 export type ReadToolInput = z.infer<typeof readSchema>;
 
-export interface ReadToolDetails {
-  truncation?: TruncationResult;
-}
+export const ReadToolDetailsSchema = z.object({
+  truncation: TruncationResultSchema.optional(),
+});
+export type ReadToolDetails = z.infer<typeof ReadToolDetailsSchema>;
 
+// DI 契约，保留 TS interface
 export interface ReadOperations {
   readFile: (absolutePath: string) => Promise<Buffer>;
   access: (absolutePath: string) => Promise<void>;

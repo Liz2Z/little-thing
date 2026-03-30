@@ -9,7 +9,7 @@ import {
   DEFAULT_MAX_BYTES,
   formatSize,
   GREP_MAX_LINE_LENGTH,
-  type TruncationResult,
+  TruncationResultSchema,
   truncateHead,
   truncateLine,
 } from './truncate.js';
@@ -47,12 +47,14 @@ export type GrepToolInput = z.infer<typeof grepSchema>;
 
 const DEFAULT_LIMIT = 100;
 
-export interface GrepToolDetails {
-  truncation?: TruncationResult;
-  matchLimitReached?: number;
-  linesTruncated?: boolean;
-}
+export const GrepToolDetailsSchema = z.object({
+  truncation: TruncationResultSchema.optional(),
+  matchLimitReached: z.number().optional(),
+  linesTruncated: z.boolean().optional(),
+});
+export type GrepToolDetails = z.infer<typeof GrepToolDetailsSchema>;
 
+// DI 契约，保留 TS interface
 export interface GrepOperations {
   isDirectory: (absolutePath: string) => Promise<boolean> | boolean;
   readFile: (absolutePath: string) => Promise<string> | string;
