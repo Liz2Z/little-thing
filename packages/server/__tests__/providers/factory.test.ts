@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { InternalError } from '../../src/errors/types';
-import { InternalErrors } from '../../src/errors/codes';
+import { InternalError, NotFoundError } from '../../src/errors/types';
+import { InternalErrors, ProviderErrors } from '../../src/errors/codes';
 
 const mockAnthropicModel = mock(() => 'anthropic-model');
 const mockOpenAIModel = mock(() => 'openai-model');
@@ -22,7 +22,15 @@ mock.module('@ai-sdk/openai-compatible', () => ({
   createOpenAICompatible: mockCreateOpenAICompatible,
 }));
 
-const { createModel } = await import('../../src/providers/factory');
+// Mock global fetch - 必须在导入 factory 之前设置
+const originalFetch = globalThis.fetch;
+const mockFetch = mock(() => Promise.resolve({
+  ok: true,
+  json: async () => ({ object: 'list', data: [] }),
+} as Response));
+globalThis.fetch = mockFetch;
+
+const { createModel, listModels } = await import('../../src/providers/factory');
 
 describe('Provider Factory', () => {
   const originalEnv = { ...process.env };
@@ -39,6 +47,8 @@ describe('Provider Factory', () => {
     mockAnthropicModel.mockClear();
     mockOpenAIModel.mockClear();
     mockCompatibleModel.mockClear();
+    mockFetch.mockClear();
+    globalThis.fetch = mockFetch;
   });
 
   afterEach(() => {
@@ -49,6 +59,7 @@ describe('Provider Factory', () => {
         process.env[key] = originalEnv[key];
       }
     }
+    globalThis.fetch = originalFetch;
   });
 
   describe('createModel', () => {
@@ -58,9 +69,9 @@ describe('Provider Factory', () => {
           createModel('non-existent-provider', 'some-model');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(InternalErrors.UNKNOWN_PROVIDER[0]);
-          expect((error as InternalError).status).toBe(500);
-          expect((error as InternalError).details.message).toContain('non-existent-provider');
+          expect((error as NotFoundError).code).toBe(ProviderErrors.UNKNOWN_PROVIDER[0]);
+          expect((error as NotFoundError).status).toBe(404);
+          expect((error as NotFoundError).details.message).toContain('non-existent-provider');
         }
       });
 
@@ -69,7 +80,7 @@ describe('Provider Factory', () => {
           createModel('zhipuai-coding-plan', 'glm-4.7');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(InternalErrors.MISSING_API_KEY[0]);
+          expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
           expect((error as InternalError).status).toBe(500);
           expect((error as InternalError).details.message).toContain('ZHIPU_API_KEY');
         }
@@ -145,10 +156,121 @@ describe('Provider Factory', () => {
         createModel('zhipuai-coding-plan', 'glm-4.7');
         expect(true).toBe(false);
       } catch (error) {
-        expect((error as InternalError).code).toBe(InternalErrors.MISSING_API_KEY[0]);
+        expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
         const details = (error as InternalError).details;
         expect(details.message).toContain('ZHIPU_API_KEY');
       }
+    });
+  });
+
+  describe('listModels', () => {
+    describe('error handling', () => {
+      it('should throw error with UNKNOWN_PROVIDER code when provider does not exist', async () => {
+        try {
+          await listModels('non-existent-provider');
+          expect(true).toBe(false);
+        } catch (error) {
+          expect((error as NotFoundError).code).toBe(ProviderErrors.UNKNOWN_PROVIDER[0]);
+          expect((error as NotFoundError).status).toBe(404);
+          expect((error as NotFoundError).details.message).toContain('non-existent-provider');
+        }
+      });
+
+      it('should throw error with MISSING_API_KEY code when no API key is configured', async () => {
+        try {
+          await listModels('zhipuai-coding-plan');
+          expect(true).toBe(false);
+        } catch (error) {
+          expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
+          expect((error as InternalError).status).toBe(500);
+          expect((error as InternalError).details.message).toContain('ZHIPU_API_KEY');
+        }
+      });
+    });
+
+    describe('successful API calls', () => {
+      it('should return models list from provider API', async () => {
+        process.env.ZHIPU_API_KEY = 'test-zhipu-key';
+
+        mockFetch.mockImplementation(() => Promise.resolve({
+          ok: true,
+          json: async () => ({
+            object: 'list',
+            data: [
+              { id: 'glm-4.7', object: 'model', created: 1766332800, owned_by: 'z-ai' },
+              { id: 'glm-4.6', object: 'model', created: 1759276800, owned_by: 'z-ai' },
+            ],
+          }),
+        } as Response));
+
+        const models = await listModels('zhipuai-coding-plan');
+
+        expect(models).toEqual([
+          { id: 'glm-4.7', object: 'model', created: 1766332800, owned_by: 'z-ai' },
+          { id: 'glm-4.6', object: 'model', created: 1759276800, owned_by: 'z-ai' },
+        ]);
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://open.bigmodel.cn/api/coding/paas/v4/models',
+          expect.objectContaining({
+            method: 'GET',
+            headers: expect.objectContaining({
+              'Authorization': 'Bearer test-zhipu-key',
+            }),
+          })
+        );
+      });
+
+      it('should handle empty data array from provider', async () => {
+        process.env.ZHIPU_API_KEY = 'test-key';
+
+        mockFetch.mockImplementation(() => Promise.resolve({
+          ok: true,
+          json: async () => ({
+            object: 'list',
+            data: [],
+          }),
+        } as Response));
+
+        const models = await listModels('zhipuai-coding-plan');
+
+        expect(models).toEqual([]);
+      });
+    });
+
+    describe('API error handling', () => {
+      it('should throw PROVIDER_API_ERROR when API returns non-OK status', async () => {
+        process.env.ZHIPU_API_KEY = 'test-key';
+
+        mockFetch.mockImplementation(() => Promise.resolve({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: async () => ({ error: 'Unauthorized' }),
+        } as Response));
+
+        try {
+          await listModels('zhipuai-coding-plan');
+          expect(true).toBe(false);
+        } catch (error) {
+          expect((error as InternalError).code).toBe(ProviderErrors.API_ERROR[0]);
+          expect((error as InternalError).status).toBe(502);
+        }
+      });
+
+      it('should throw PROVIDER_API_ERROR when network error occurs', async () => {
+        process.env.ZHIPU_API_KEY = 'test-key';
+
+        mockFetch.mockImplementation(() => Promise.reject(new Error('Network error')));
+
+        try {
+          await listModels('zhipuai-coding-plan');
+          expect(true).toBe(false);
+        } catch (error) {
+          expect((error as InternalError).code).toBe(ProviderErrors.API_ERROR[0]);
+          expect((error as InternalError).details.message).toContain('Network error');
+        }
+      });
     });
   });
 });

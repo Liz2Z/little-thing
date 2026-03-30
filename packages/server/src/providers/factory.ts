@@ -1,8 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { InternalError } from '../errors/index.js';
-import { InternalErrors } from '../errors/codes.js';
+import { InternalError, NotFoundError } from '../errors/index.js';
+import { InternalErrors, ProviderErrors } from '../errors/codes.js';
 import modelsData from './models.json';
 
 interface ProviderConfig {
@@ -16,13 +16,14 @@ interface ProviderConfig {
  * @param providerId - 供应商 ID（如 "zhipuai-coding-plan"）
  * @param modelId - 模型 ID（如 "glm-4.7"）
  * @returns LanguageModel 实例
- * @throws {InternalError} 当 provider 不存在或 API key 缺失时抛出错误
+ * @throws {NotFoundError} 当 provider 不存在时抛出错误
+ * @throws {InternalError} 当 API key 缺失或 SDK 不支持时抛出错误
  */
 export function createModel(providerId: string, modelId: string): any {
   const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
 
   if (!providerConfig) {
-    throw new InternalError(InternalErrors.UNKNOWN_PROVIDER, {
+    throw new NotFoundError(ProviderErrors.UNKNOWN_PROVIDER, {
       message: `Unknown provider: ${providerId}`,
     });
   }
@@ -63,6 +64,51 @@ export function createModel(providerId: string, modelId: string): any {
 }
 
 /**
+ * 获取 provider 支持的模型列表
+ * @param providerId - 供应商 ID（如 "zhipuai-coding-plan"）
+ * @returns 模型列表
+ * @throws {NotFoundError} 当 provider 不存在时抛出错误
+ * @throws {InternalError} 当 API key 缺失或 API 调用失败时抛出错误
+ */
+export async function listModels(providerId: string): Promise<Array<{ id: string; created?: number }>> {
+  const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
+
+  if (!providerConfig) {
+    throw new NotFoundError(ProviderErrors.UNKNOWN_PROVIDER, {
+      message: `Unknown provider: ${providerId}`,
+    });
+  }
+
+  const apiKey = getApiKey(providerConfig.env);
+
+  try {
+    const response = await fetch(`${providerConfig.api}/models`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new InternalError(ProviderErrors.API_ERROR, {
+        message: `Provider API returned error: ${response.status} ${response.statusText}`,
+      });
+    }
+
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    if (error instanceof InternalError || error instanceof NotFoundError) {
+      throw error;
+    }
+    throw new InternalError(ProviderErrors.API_ERROR, {
+      message: `Failed to fetch models from provider: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
+}
+
+/**
  * 从环境变量中获取 API Key
  * @param envNames - 环境变量名列表
  * @returns 第一个非空的环境变量值
@@ -73,7 +119,7 @@ function getApiKey(envNames: string[]): string {
     const key = process.env[name];
     if (key) return key;
   }
-  throw new InternalError(InternalErrors.MISSING_API_KEY, {
+  throw new InternalError(ProviderErrors.MISSING_API_KEY, {
     message: `Missing API key. Set one of: ${envNames.join(', ')}`,
   });
 }

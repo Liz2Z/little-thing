@@ -9,6 +9,7 @@
 - 组合优于继承
 - 修改bug后，让用户自己重启服务并测试
 - 优先使用 zod，而不是 interface
+- 可预期的业务错误不应该叫 internal error, internal error 仅限于不该发生的事发生了（bug、崩溃、意外的异常）
 
 ## server 规范
 
@@ -28,4 +29,3 @@
 - **处理前端、tsx、react逻辑时必读！！！**: file://./docs/DEV-GUIDELINES-FRONTEND.md
 - **处理后端逻辑时必读**: file://./docs/DEV-GUIDELINES-BACKEND.md
 - **Git 操作必读**: file://./docs/GIT-GUIDELINES.md
-

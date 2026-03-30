@@ -35,11 +35,15 @@ export const ConfigErrors = {
   INVALID: ['CONFIG-1002', 500, '服务器配置无效'] as const,
 };
 
+export const ProviderErrors = {
+  UNKNOWN_PROVIDER: ['PROVIDER-1001', 404, 'Provider 不存在'] as const,
+  MISSING_API_KEY: ['PROVIDER-1002', 500, 'Provider API Key 未配置'] as const,
+  API_ERROR: ['PROVIDER-1003', 502, 'Provider API 返回错误'] as const,
+};
+
 export const InternalErrors = {
   ERROR: ['INTERNAL-1001', 500, '服务器内部错误'] as const,
-  UNKNOWN_PROVIDER: ['INTERNAL-1002', 500, 'Unknown provider'] as const,
-  UNSUPPORTED_SDK: ['INTERNAL-1003', 500, 'Unsupported SDK'] as const,
-  MISSING_API_KEY: ['INTERNAL-1004', 500, 'Missing API key'] as const,
+  UNSUPPORTED_SDK: ['INTERNAL-1002', 500, '不支持的 SDK 类型'] as const,
 };
 
 export type ErrorTuple = readonly [code: string, status: number, message: string];
@@ -50,6 +54,7 @@ export type ErrorCode =
   | typeof ToolErrors[keyof typeof ToolErrors][0]
   | typeof LlmErrors[keyof typeof LlmErrors][0]
   | typeof ConfigErrors[keyof typeof ConfigErrors][0]
+  | typeof ProviderErrors[keyof typeof ProviderErrors][0]
   | typeof InternalErrors[keyof typeof InternalErrors][0];
 
 export interface ErrorResponse {

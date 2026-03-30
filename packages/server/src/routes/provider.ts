@@ -1,37 +1,45 @@
-import { Hono } from 'hono';
-import { describeRoute, resolver } from 'hono-openapi';
-import { z } from 'zod';
-import modelsData from '../providers/models.json';
+import { Hono } from "hono";
+import { describeRoute, resolver } from "hono-openapi";
+import { z } from "zod";
+import { listModels } from "../providers/factory.js";
 
 const app = new Hono();
 
 app.get(
-  '/models',
+  "/providers/:providerId/models",
   describeRoute({
-    operationId: 'provider.models.list',
-    summary: '获取可用模型列表',
-    description: '从当前配置的 LLM Provider 获取可用模型列表',
-    tags: ['Provider'],
+    operationId: "provider.models.listByProvider",
+    summary: "获取指定 provider 的模型列表",
+    description: "从指定 provider 的 API 获取可用模型列表",
+    tags: ["Provider"],
+    parameters: [
+      {
+        name: "providerId",
+        in: "path",
+        required: true,
+        schema: resolver(z.string().meta({ description: "供应商 ID" })),
+      },
+    ],
     responses: {
       200: {
-        description: '可用模型列表',
+        description: "可用模型列表",
         content: {
-          'application/json': {
+          "application/json": {
             schema: resolver(
               z.object({
-                providers: z.array(
+                object: z.literal("list"),
+                data: z.array(
                   z.object({
-                    id: z.string().meta({ description: '供应商 ID' }),
-                    name: z.string().meta({ description: '供应商名称' }),
-                    models: z.array(
-                      z.object({
-                        id: z.string().meta({ description: '模型 ID' }),
-                        name: z.string().meta({ description: '模型名称' }),
-                        displayName: z.string().optional().meta({ description: '显示名称' }),
-                        description: z.string().optional().meta({ description: '模型描述' }),
-                        contextLength: z.number().optional().meta({ description: '上下文长度' }),
-                      }),
-                    ),
+                    id: z.string().meta({ description: "模型 ID" }),
+                    object: z.literal("model"),
+                    created: z
+                      .number()
+                      .optional()
+                      .meta({ description: "创建时间戳" }),
+                    owned_by: z
+                      .string()
+                      .optional()
+                      .meta({ description: "所有者" }),
                   }),
                 ),
               }),
@@ -41,21 +49,13 @@ app.get(
       },
     },
   }),
-  (c) => {
-    // 将 models.json 转换为响应格式
-    const providers = Object.entries(modelsData).map(([providerId, providerData]: [string, any]) => ({
-      id: providerId,
-      name: providerData.name || providerId,
-      models: Object.entries(providerData.models || {}).map(([modelId, modelData]: [string, any]) => ({
-        id: modelId,
-        name: modelId,
-        displayName: modelData.display_name || modelData.name || modelId,
-        description: modelData.description,
-        contextLength: modelData.context_length,
-      })),
-    }));
-
-    return c.json({ providers });
+  async (c) => {
+    const providerId = c.req.param("providerId");
+    const models = await listModels(providerId);
+    return c.json({
+      object: "list",
+      data: models,
+    });
   },
 );
 
