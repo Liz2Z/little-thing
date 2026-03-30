@@ -23,7 +23,7 @@ function convertMessage(message: Message): CoreMessage {
           {
             type: 'tool-result',
             toolCallId: content.tool_use_id,
-            toolName: '',
+            toolName: content.tool_name,
             output: { type: 'text', value: content.content },
           },
         ],
@@ -35,7 +35,7 @@ function convertMessage(message: Message): CoreMessage {
 
 function convertToolUseContent(item: ToolUseContent): any {
   return {
-    type: 'tool-use',
+    type: 'tool-call',
     toolCallId: item.id,
     toolName: item.name,
     args: item.input,

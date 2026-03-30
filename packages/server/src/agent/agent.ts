@@ -269,12 +269,14 @@ export class Agent {
             final_content: responseContent,
             total_iterations: ctx.iteration + 1,
             stop_reason: stopReason,
-            usage: finalUsage
-              ? {
-                  input_tokens: finalUsage.promptTokens,
-                  output_tokens: finalUsage.completionTokens,
-                }
-              : undefined,
+            usage:
+              finalUsage?.promptTokens != null &&
+              finalUsage?.completionTokens != null
+                ? {
+                    input_tokens: finalUsage.promptTokens,
+                    output_tokens: finalUsage.completionTokens,
+                  }
+                : undefined,
           });
 
           return;
@@ -347,6 +349,7 @@ export class Agent {
       content: {
         type: "tool_result",
         tool_use_id: toolCall.id,
+        tool_name: toolCall.name,
         content: result.success ? result.output || "" : result.error || "",
         is_error: !result.success,
       },

@@ -22,6 +22,7 @@ export type ToolUseContent = z.infer<typeof ToolUseContentSchema>;
 export const ToolResultContentSchema = z.object({
   type: z.literal('tool_result'),
   tool_use_id: z.string(),
+  tool_name: z.string(),
   content: z.string(),
   is_error: z.boolean().optional(),
 });
