@@ -1,15 +1,27 @@
-import { SessionStore } from './store.js';
-import type { Session, SessionMeta } from './session.schema.js';
-import type { Message } from './message.js';
-import { Agent } from '../agent/agent.js';
+import { SessionStore } from "./store.js";
+import type { Session, SessionMeta } from "./session.schema.js";
+import type { Message } from "./message.js";
+import { Agent } from "../agent/agent.js";
 import type {
   AgentEvent,
   AgentErrorEvent,
   AgentCompleteEvent,
-} from '../agent/agent-events.schema.js';
-import type { ToolExecutor } from '../tools/registry.js';
-import type { LanguageModel } from 'ai';
-import { createModel } from '../providers/factory.js';
+} from "../agent/agent-events.schema.js";
+import type { ToolExecutor } from "../tools/registry.js";
+import { ValidationError } from "../errors/base.js";
+
+import type { LanguageModel } from "ai";
+import { createModel } from "../providers/factory.js";
+
+class ProviderRequiredError extends ValidationError {
+  constructor() {
+    super([
+      "SESSION-PROVIDER_REQUIRED",
+      400,
+      "Provider 和 model 是必需的",
+    ] as const);
+  }
+}
 
 export interface ChatOptions {
   enabledTools?: string[];
@@ -48,11 +60,15 @@ export class SessionService {
     return this.sessionStore.renameSession(id, name);
   }
 
-  addMessage(sessionId: string, message: Omit<Message, 'id'>): boolean {
+  addMessage(sessionId: string, message: Omit<Message, "id">): boolean {
     return this.sessionStore.addMessage(sessionId, message);
   }
 
-  forkSession(sessionId: string, messageId: string, name?: string): SessionMeta | null {
+  forkSession(
+    sessionId: string,
+    messageId: string,
+    name?: string,
+  ): SessionMeta | null {
     return this.sessionStore.forkSession(sessionId, messageId, name);
   }
 
@@ -60,24 +76,23 @@ export class SessionService {
     return this.sessionStore.resumeSession(sessionId, messageId);
   }
 
-  abort(runId: string): void {
-  }
+  abort(runId: string): void {}
 
   async *chat(
     sessionId: string,
     message: string,
-    options?: ChatOptions
+    options?: ChatOptions,
   ): AsyncGenerator<AgentEvent> {
     const session = this.sessionStore.getSession(sessionId);
     if (!session) {
       const errorEvent: AgentErrorEvent = {
-        type: 'agent_error',
-        status: 'failed',
-        error: 'Session not found',
-        error_type: 'unknown',
-        run_id: '',
+        type: "agent_error",
+        status: "failed",
+        error: "Session not found",
+        error_type: "unknown",
+        run_id: "",
         seq: 0,
-        span_id: '',
+        span_id: "",
         parent_span_id: null,
         timestamp: new Date().toISOString(),
       };
@@ -85,11 +100,11 @@ export class SessionService {
       return;
     }
 
-    const provider = options?.provider || session.meta.provider ;
-    const model = options?.model || session.meta.model ;
+    const provider = options?.provider || session.meta.provider;
+    const model = options?.model || session.meta.model;
 
     if (!provider || !model) {
-      throw new Error('Provider and model are required');
+      throw new ProviderRequiredError();
     }
 
     try {
@@ -100,16 +115,19 @@ export class SessionService {
       })) {
         yield event;
 
-        if (event.type === 'agent_complete' || event.type === 'agent_error') {
+        if (event.type === "agent_complete" || event.type === "agent_error") {
           this.sessionStore.addMessage(sessionId, {
-            role: 'user',
-            content: { type: 'text', text: message },
+            role: "user",
+            content: { type: "text", text: message },
             timestamp: new Date().toISOString(),
           });
-          if (event.type === 'agent_complete') {
+          if (event.type === "agent_complete") {
             this.sessionStore.addMessage(sessionId, {
-              role: 'assistant',
-              content: { type: 'text', text: (event as AgentCompleteEvent).final_content },
+              role: "assistant",
+              content: {
+                type: "text",
+                text: (event as AgentCompleteEvent).final_content,
+              },
               timestamp: new Date().toISOString(),
             });
           }
@@ -117,13 +135,13 @@ export class SessionService {
       }
     } catch (error) {
       const errorEvent: AgentErrorEvent = {
-        type: 'agent_error',
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        error_type: 'unknown',
-        run_id: '',
+        type: "agent_error",
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+        error_type: "unknown",
+        run_id: "",
         seq: 0,
-        span_id: '',
+        span_id: "",
         parent_span_id: null,
         timestamp: new Date().toISOString(),
       };

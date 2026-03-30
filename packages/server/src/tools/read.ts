@@ -4,7 +4,19 @@ import { access as fsAccess, readFile as fsReadFile } from 'fs/promises';
 import type { ToolDefinition, ToolExecutionResult, TextContent, ImageContent } from './types.js';
 import { resolveReadPath } from './path-utils.js';
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
-import { ValidationError, ToolErrors } from '../errors/index.js';
+import { ValidationError } from '../errors/base.js';
+
+class ToolAbortedError extends ValidationError {
+  constructor() {
+    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+  }
+}
+
+class OffsetBeyondEndError extends ValidationError {
+  constructor(offset: number, totalLines: number) {
+    super(['TOOL:OFFSET_BEYOND_END', 400, '偏移量超出文件范围'] as const, { offset, totalLines });
+  }
+}
 
 const readSchema = z.object({
   path: z.string().describe('Path to the file to read (relative or absolute)'),
@@ -53,7 +65,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
       return new Promise<{ content: (TextContent | ImageContent)[]; details: ReadToolDetails | undefined }>(
         (resolve, reject) => {
           if (signal?.aborted) {
-            reject(new ValidationError(ToolErrors.ABORTED));
+            reject(new ToolAbortedError());
             return;
           }
 
@@ -61,7 +73,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
           const onAbort = () => {
             aborted = true;
-            reject(new ValidationError(ToolErrors.ABORTED));
+            reject(new ToolAbortedError());
           };
 
           if (signal) {
@@ -85,10 +97,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
               const startLineDisplay = startLine + 1;
 
               if (startLine >= allLines.length) {
-                throw new ValidationError(ToolErrors.OFFSET_BEYOND_END, {
-                  offset,
-                  totalLines: allLines.length,
-                });
+                throw new OffsetBeyondEndError(offset, allLines.length);
               }
 
               let selectedContent: string;

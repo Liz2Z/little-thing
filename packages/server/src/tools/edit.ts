@@ -12,7 +12,31 @@ import {
   stripBom,
 } from './edit-diff.js';
 import { resolveToCwd } from './path-utils.js';
-import { ValidationError, ToolErrors } from '../errors/index.js';
+import { ValidationError } from '../errors/base.js';
+
+class ToolAbortedError extends ValidationError {
+  constructor() {
+    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+  }
+}
+
+class FileNotFoundError extends ValidationError {
+  constructor(path: string) {
+    super(['TOOL:FILE_NOT_FOUND', 400, '文件不存在'] as const, { path });
+  }
+}
+
+class OldTextNotFoundError extends ValidationError {
+  constructor(path: string, hint: string) {
+    super(['TOOL:OLD_TEXT_NOT_FOUND', 400, '未找到要替换的文本'] as const, { path, hint });
+  }
+}
+
+class OldTextMultipleError extends ValidationError {
+  constructor(path: string, occurrences: number, hint: string) {
+    super(['TOOL:OLD_TEXT_MULTIPLE', 400, '要替换的文本出现多次'] as const, { path, occurrences, hint });
+  }
+}
 
 const editSchema = z.object({
   path: z.string().describe('Path to the file to edit (relative or absolute)'),
@@ -64,7 +88,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
         details: EditToolDetails | undefined;
       }>((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new ValidationError(ToolErrors.ABORTED));
+          reject(new ToolAbortedError());
           return;
         }
 
@@ -72,7 +96,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
         const onAbort = () => {
           aborted = true;
-          reject(new ValidationError(ToolErrors.ABORTED));
+          reject(new ToolAbortedError());
         };
 
         if (signal) {
@@ -87,7 +111,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
               if (signal) {
                 signal.removeEventListener('abort', onAbort);
               }
-              reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path }));
+              reject(new FileNotFoundError(path));
               return;
             }
 
@@ -116,10 +140,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new ValidationError(ToolErrors.OLD_TEXT_NOT_FOUND, {
-                  path,
-                  hint: 'The old text must match exactly including all whitespace and newlines.',
-                }),
+                new OldTextNotFoundError(path, 'The old text must match exactly including all whitespace and newlines.'),
               );
               return;
             }
@@ -133,11 +154,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new ValidationError(ToolErrors.OLD_TEXT_MULTIPLE, {
-                  path,
-                  occurrences,
-                  hint: 'Please provide more context to make it unique.',
-                }),
+                new OldTextMultipleError(path, occurrences, 'Please provide more context to make it unique.'),
               );
               return;
             }
@@ -157,10 +174,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
                 signal.removeEventListener('abort', onAbort);
               }
               reject(
-                new ValidationError(ToolErrors.OLD_TEXT_NOT_FOUND, {
-                  path,
-                  hint: 'The replacement produced identical content. This might indicate an issue with special characters.',
-                }),
+                new OldTextNotFoundError(path, 'The replacement produced identical content. This might indicate an issue with special characters.'),
               );
               return;
             }

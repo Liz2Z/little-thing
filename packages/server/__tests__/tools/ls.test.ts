@@ -37,7 +37,7 @@ describe('ls tool', () => {
       await lsTool.execute('test-id', { path: '/non/existent/path' });
       expect(true).toBe(false);
     } catch (error: any) {
-      expect(error.code).toBe('TOOL-1001');
+      expect(error.code).toBe('TOOL:FILE_NOT_FOUND');
     }
   });
 
@@ -46,7 +46,7 @@ describe('ls tool', () => {
       await lsTool.execute('test-id', { path: 'file1.txt' });
       expect(true).toBe(false);
     } catch (error: any) {
-      expect(error.code).toBe('TOOL-1007');
+      expect(error.code).toBe('TOOL:NOT_A_DIRECTORY');
     }
   });
 

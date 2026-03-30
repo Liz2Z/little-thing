@@ -1,9 +1,32 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { InternalError, NotFoundError } from '../errors/index.js';
-import { InternalErrors, ProviderErrors } from '../errors/codes.js';
+import { InternalError, NotFoundError } from '../errors/base.js';
 import modelsData from './models.json';
+
+class UnknownProviderError extends NotFoundError {
+  constructor(details?: Record<string, unknown>) {
+    super(['PROVIDER:UNKNOWN', 404, 'Provider 不存在'] as const, details);
+  }
+}
+
+class UnsupportedSDKError extends InternalError {
+  constructor(details?: Record<string, unknown>) {
+    super(['PROVIDER:UNSUPPORTED_SDK', 500, '不支持的 SDK 类型'] as const, details);
+  }
+}
+
+class ProviderAPIError extends InternalError {
+  constructor(details?: Record<string, unknown>) {
+    super(['PROVIDER:API_ERROR', 502, 'Provider API 返回错误'] as const, details);
+  }
+}
+
+class MissingAPIKeyError extends InternalError {
+  constructor(details?: Record<string, unknown>) {
+    super(['PROVIDER:MISSING_API_KEY', 500, 'Provider API Key 未配置'] as const, details);
+  }
+}
 
 interface ProviderConfig {
   npm: string;
@@ -23,9 +46,7 @@ export function createModel(providerId: string, modelId: string): any {
   const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
 
   if (!providerConfig) {
-    throw new NotFoundError(ProviderErrors.UNKNOWN_PROVIDER, {
-      message: `Unknown provider: ${providerId}`,
-    });
+    throw new UnknownProviderError({ providerId });
   }
 
   const apiKey = getApiKey(providerConfig.env);
@@ -57,9 +78,7 @@ export function createModel(providerId: string, modelId: string): any {
     }
 
     default:
-      throw new InternalError(InternalErrors.UNSUPPORTED_SDK, {
-        message: `Unsupported SDK: ${providerConfig.npm}`,
-      });
+      throw new UnsupportedSDKError({ npm: providerConfig.npm });
   }
 }
 
@@ -74,9 +93,7 @@ export async function listModels(providerId: string): Promise<Array<{ id: string
   const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
 
   if (!providerConfig) {
-    throw new NotFoundError(ProviderErrors.UNKNOWN_PROVIDER, {
-      message: `Unknown provider: ${providerId}`,
-    });
+    throw new UnknownProviderError({ providerId });
   }
 
   const apiKey = getApiKey(providerConfig.env);
@@ -91,7 +108,7 @@ export async function listModels(providerId: string): Promise<Array<{ id: string
     });
 
     if (!response.ok) {
-      throw new InternalError(ProviderErrors.API_ERROR, {
+      throw new ProviderAPIError({
         message: `Provider API returned error: ${response.status} ${response.statusText}`,
       });
     }
@@ -102,7 +119,7 @@ export async function listModels(providerId: string): Promise<Array<{ id: string
     if (error instanceof InternalError || error instanceof NotFoundError) {
       throw error;
     }
-    throw new InternalError(ProviderErrors.API_ERROR, {
+    throw new ProviderAPIError({
       message: `Failed to fetch models from provider: ${error instanceof Error ? error.message : String(error)}`,
     });
   }
@@ -119,7 +136,5 @@ function getApiKey(envNames: string[]): string {
     const key = process.env[name];
     if (key) return key;
   }
-  throw new InternalError(ProviderErrors.MISSING_API_KEY, {
-    message: `Missing API key. Set one of: ${envNames.join(', ')}`,
-  });
+  throw new MissingAPIKeyError({ envNames });
 }

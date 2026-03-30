@@ -1,4 +1,10 @@
-import type { ErrorTuple, ErrorResponse } from './codes';
+export type ErrorTuple = readonly [code: string, status: number, message: string];
+
+export interface ErrorResponse {
+  code: string;
+  message: string;
+  details: Record<string, unknown>;
+}
 
 export class AppError extends Error {
   readonly code: string;

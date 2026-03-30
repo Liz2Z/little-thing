@@ -401,7 +401,7 @@ describe('SessionService', () => {
 
       expect(async () => {
         for await (const _ of testService.chat(meta.id, 'Hello')) {}
-      }).toThrow('Provider and model are required');
+      }).toThrow('Provider 和 model 是必需的');
     });
 
     it('should add user and assistant messages on agent complete', async () => {

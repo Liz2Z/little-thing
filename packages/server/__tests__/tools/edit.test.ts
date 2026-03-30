@@ -58,7 +58,7 @@ describe('edit tool', () => {
       });
       expect(true).toBe(false);
     } catch (error: any) {
-      expect(error.code).toBe('TOOL-1008');
+      expect(error.code).toBe('TOOL:OLD_TEXT_NOT_FOUND');
     }
   });
 
@@ -72,7 +72,7 @@ describe('edit tool', () => {
       });
       expect(true).toBe(false);
     } catch (error: any) {
-      expect(error.code).toBe('TOOL-1009');
+      expect(error.code).toBe('TOOL:OLD_TEXT_MULTIPLE');
     }
   });
 
@@ -85,7 +85,7 @@ describe('edit tool', () => {
       });
       expect(true).toBe(false);
     } catch (error: any) {
-      expect(error.code).toBe('TOOL-1001');
+      expect(error.code).toBe('TOOL:FILE_NOT_FOUND');
     }
   });
 });

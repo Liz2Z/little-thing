@@ -4,7 +4,31 @@ import nodePath from 'path';
 import type { ToolDefinition, ToolExecutionResult } from './types.js';
 import { resolveToCwd } from './path-utils.js';
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from './truncate.js';
-import { ValidationError, ForbiddenError, ToolErrors } from '../errors/index.js';
+import { ValidationError, ForbiddenError } from '../errors/base.js';
+
+class ToolAbortedError extends ValidationError {
+  constructor() {
+    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+  }
+}
+
+class FileNotFoundError extends ValidationError {
+  constructor(path: string) {
+    super(['TOOL:FILE_NOT_FOUND', 400, '文件不存在'] as const, { path });
+  }
+}
+
+class NotADirectoryError extends ValidationError {
+  constructor(path: string) {
+    super(['TOOL:NOT_A_DIRECTORY', 400, '不是目录'] as const, { path });
+  }
+}
+
+class PermissionDeniedError extends ForbiddenError {
+  constructor(path: string, reason: string) {
+    super(['TOOL:PERMISSION_DENIED', 403, '权限不足'] as const, { path, reason });
+  }
+}
 
 const lsSchema = z.object({
   path: z.string().describe('Directory to list (default: current directory)').optional(),
@@ -51,11 +75,11 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
     ) => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new ValidationError(ToolErrors.ABORTED));
+          reject(new ToolAbortedError());
           return;
         }
 
-        const onAbort = () => reject(new ValidationError(ToolErrors.ABORTED));
+        const onAbort = () => reject(new ToolAbortedError());
         signal?.addEventListener('abort', onAbort, { once: true });
 
         (async () => {
@@ -64,13 +88,13 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             const effectiveLimit = limit ?? DEFAULT_LIMIT;
 
             if (!(await ops.exists(dirPath))) {
-              reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path: dirPath }));
+              reject(new FileNotFoundError(dirPath));
               return;
             }
 
             const stat = await ops.stat(dirPath);
             if (!stat.isDirectory()) {
-              reject(new ValidationError(ToolErrors.NOT_A_DIRECTORY, { path: dirPath }));
+              reject(new NotADirectoryError(dirPath));
               return;
             }
 
@@ -78,7 +102,7 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             try {
               entries = await ops.readdir(dirPath);
             } catch (e: any) {
-              reject(new ForbiddenError(ToolErrors.PERMISSION_DENIED, { path: dirPath, reason: e.message }));
+              reject(new PermissionDeniedError(dirPath, e.message));
               return;
             }
 

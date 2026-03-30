@@ -3,7 +3,13 @@ import { mkdir as fsMkdir, writeFile as fsWriteFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { ToolDefinition } from './types.js';
 import { resolveToCwd } from './path-utils.js';
-import { ValidationError, ToolErrors } from '../errors/index.js';
+import { ValidationError } from '../errors/base.js';
+
+class ToolAbortedError extends ValidationError {
+  constructor() {
+    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+  }
+}
 
 const writeSchema = z.object({
   path: z.string().describe('Path to the file to write (relative or absolute)'),
@@ -46,7 +52,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
       return new Promise<{ content: Array<{ type: 'text'; text: string }>; details: undefined }>(
         (resolve, reject) => {
           if (signal?.aborted) {
-            reject(new ValidationError(ToolErrors.ABORTED));
+            reject(new ToolAbortedError());
             return;
           }
 
@@ -54,7 +60,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
           const onAbort = () => {
             aborted = true;
-            reject(new ValidationError(ToolErrors.ABORTED));
+            reject(new ToolAbortedError());
           };
 
           if (signal) {

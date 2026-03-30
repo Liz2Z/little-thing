@@ -4,12 +4,18 @@ import { Hono } from "hono";
 import { settings } from "./settings";
 
 import { sessionRoutes, systemRoutes, providerRoutes } from "./routes";
-import { errorHandler, InternalError, ConfigErrors } from "./errors";
+import { errorHandler, InternalError } from "./errors";
+
+class ConfigNotLoadedError extends InternalError {
+  constructor() {
+    super(['CONFIG:NOT_LOADED', 500, '服务器配置未加载'] as const);
+  }
+}
 
 const rawSettings = settings.get();
 
 if (!rawSettings?.server) {
-  throw new InternalError(ConfigErrors.NOT_LOADED);
+  throw new ConfigNotLoadedError();
 }
 
 const port = rawSettings.server.port;

@@ -13,7 +13,25 @@ import {
   truncateHead,
   truncateLine,
 } from './truncate.js';
-import { ValidationError, InternalError, ToolErrors } from '../errors/index.js';
+import { ValidationError, InternalError } from '../errors/base.js';
+
+class ToolAbortedError extends ValidationError {
+  constructor() {
+    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+  }
+}
+
+class FileNotFoundError extends ValidationError {
+  constructor(path: string) {
+    super(['TOOL:FILE_NOT_FOUND', 400, '文件不存在'] as const, { path });
+  }
+}
+
+class ExecutionFailedError extends InternalError {
+  constructor(reason: string) {
+    super(['TOOL:EXECUTION_FAILED', 500, '工具执行失败'] as const, { reason });
+  }
+}
 
 const grepSchema = z.object({
   pattern: z.string().describe('Search pattern (regex or literal string)'),
@@ -80,7 +98,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
     ) => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
-          reject(new ValidationError(ToolErrors.ABORTED));
+          reject(new ToolAbortedError());
           return;
         }
 
@@ -102,7 +120,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
             try {
               isDirectory = await ops.isDirectory(searchPath);
             } catch (_err) {
-              settle(() => reject(new ValidationError(ToolErrors.FILE_NOT_FOUND, { path: searchPath })));
+              settle(() => reject(new FileNotFoundError(searchPath)));
               return;
             }
             const contextValue = context && context > 0 ? context : 0;
@@ -245,20 +263,20 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
 
             child.on('error', (error) => {
               cleanup();
-              settle(() => reject(new InternalError(ToolErrors.EXECUTION_FAILED, { reason: error.message })));
+              settle(() => reject(new ExecutionFailedError(error.message)));
             });
 
             child.on('close', async (code) => {
               cleanup();
 
               if (aborted) {
-                settle(() => reject(new ValidationError(ToolErrors.ABORTED)));
+                settle(() => reject(new ToolAbortedError()));
                 return;
               }
 
               if (!killedDueToLimit && code !== 0 && code !== 1) {
                 const errorMsg = stderr.trim() || `ripgrep exited with code ${code}`;
-                settle(() => reject(new InternalError(ToolErrors.EXECUTION_FAILED, { reason: errorMsg })));
+                settle(() => reject(new ExecutionFailedError(errorMsg)));
                 return;
               }
 

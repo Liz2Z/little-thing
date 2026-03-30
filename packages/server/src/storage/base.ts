@@ -1,8 +1,15 @@
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { xdgData, xdgConfig, xdgCache } from 'xdg-basedir';
+import { InternalError } from '../errors/base.js';
 
 const APP_NAME = 'littlething';
+
+class XDGDirNotAvailableError extends InternalError {
+  constructor(category: string) {
+    super(['STORAGE:XDG_DIR_NOT_AVAILABLE', 500, `XDG ${category} 目录不可用`] as const, { category });
+  }
+}
 
 export type StorageCategory = 'data' | 'config' | 'cache';
 
@@ -12,7 +19,7 @@ export function getBaseDir(category: StorageCategory = 'data'): string {
     : xdgData;
 
   if (!base) {
-    throw new Error(`XDG ${category} directory is not available`);
+    throw new XDGDirNotAvailableError(category);
   }
 
   return join(base, APP_NAME);

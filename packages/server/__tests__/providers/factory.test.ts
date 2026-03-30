@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { InternalError, NotFoundError } from '../../src/errors/types';
-import { InternalErrors, ProviderErrors } from '../../src/errors/codes';
+import { InternalError, NotFoundError } from '../../src/errors/base';
 
 const mockAnthropicModel = mock(() => 'anthropic-model');
 const mockOpenAIModel = mock(() => 'openai-model');
@@ -69,9 +68,9 @@ describe('Provider Factory', () => {
           createModel('non-existent-provider', 'some-model');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as NotFoundError).code).toBe(ProviderErrors.UNKNOWN_PROVIDER[0]);
+          expect((error as NotFoundError).code).toBe('PROVIDER:UNKNOWN');
           expect((error as NotFoundError).status).toBe(404);
-          expect((error as NotFoundError).details.message).toContain('non-existent-provider');
+          expect((error as NotFoundError).details.providerId).toBe('non-existent-provider');
         }
       });
 
@@ -80,9 +79,9 @@ describe('Provider Factory', () => {
           createModel('zhipuai-coding-plan', 'glm-4.7');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
+          expect((error as InternalError).code).toBe('PROVIDER:MISSING_API_KEY');
           expect((error as InternalError).status).toBe(500);
-          expect((error as InternalError).details.message).toContain('ZHIPU_API_KEY');
+          expect((error as InternalError).details.envNames).toContain('ZHIPU_API_KEY');
         }
       });
     });
@@ -156,9 +155,9 @@ describe('Provider Factory', () => {
         createModel('zhipuai-coding-plan', 'glm-4.7');
         expect(true).toBe(false);
       } catch (error) {
-        expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
+        expect((error as InternalError).code).toBe('PROVIDER:MISSING_API_KEY');
         const details = (error as InternalError).details;
-        expect(details.message).toContain('ZHIPU_API_KEY');
+        expect(details.envNames).toContain('ZHIPU_API_KEY');
       }
     });
   });
@@ -170,9 +169,9 @@ describe('Provider Factory', () => {
           await listModels('non-existent-provider');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as NotFoundError).code).toBe(ProviderErrors.UNKNOWN_PROVIDER[0]);
+          expect((error as NotFoundError).code).toBe('PROVIDER:UNKNOWN');
           expect((error as NotFoundError).status).toBe(404);
-          expect((error as NotFoundError).details.message).toContain('non-existent-provider');
+          expect((error as NotFoundError).details.providerId).toBe('non-existent-provider');
         }
       });
 
@@ -181,9 +180,9 @@ describe('Provider Factory', () => {
           await listModels('zhipuai-coding-plan');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(ProviderErrors.MISSING_API_KEY[0]);
+          expect((error as InternalError).code).toBe('PROVIDER:MISSING_API_KEY');
           expect((error as InternalError).status).toBe(500);
-          expect((error as InternalError).details.message).toContain('ZHIPU_API_KEY');
+          expect((error as InternalError).details.envNames).toContain('ZHIPU_API_KEY');
         }
       });
     });
@@ -253,7 +252,7 @@ describe('Provider Factory', () => {
           await listModels('zhipuai-coding-plan');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(ProviderErrors.API_ERROR[0]);
+          expect((error as InternalError).code).toBe('PROVIDER:API_ERROR');
           expect((error as InternalError).status).toBe(502);
         }
       });
@@ -267,7 +266,7 @@ describe('Provider Factory', () => {
           await listModels('zhipuai-coding-plan');
           expect(true).toBe(false);
         } catch (error) {
-          expect((error as InternalError).code).toBe(ProviderErrors.API_ERROR[0]);
+          expect((error as InternalError).code).toBe('PROVIDER:API_ERROR');
           expect((error as InternalError).details.message).toContain('Network error');
         }
       });
