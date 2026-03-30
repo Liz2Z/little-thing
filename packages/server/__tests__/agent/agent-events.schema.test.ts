@@ -12,11 +12,10 @@ import {
   AgentErrorEventSchema,
   AgentAbortEventSchema,
   AgentEventSchema,
-} from '../../src/agent/agent-events.schema.js';
+} from '../../src/agent/events.js';
 
 describe('EventStatusSchema', () => {
   it('should accept valid statuses', () => {
-    expect(EventStatusSchema.parse('start')).toBe('start');
     expect(EventStatusSchema.parse('pending')).toBe('pending');
     expect(EventStatusSchema.parse('completed')).toBe('completed');
     expect(EventStatusSchema.parse('failed')).toBe('failed');
@@ -79,37 +78,23 @@ describe('AgentStartEventSchema', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_start' as const,
-      status: 'start' as const,
       message: 'Hello',
       enabled_tools: ['tool1', 'tool2'],
     };
 
     const result = AgentStartEventSchema.parse(event);
     expect(result.type).toBe('agent_start');
-    expect(result.status).toBe('start');
     expect(result.message).toBe('Hello');
     expect(result.enabled_tools).toEqual(['tool1', 'tool2']);
-  });
-
-  it('should reject agent_start with invalid status', () => {
-    const event = {
-      ...createBaseEvent(),
-      type: 'agent_start',
-      status: 'completed',
-      message: 'Hello',
-      enabled_tools: [],
-    };
-
-    expect(() => AgentStartEventSchema.parse(event)).toThrow();
   });
 });
 
 describe('AgentThinkingEventSchema', () => {
-  it('should parse valid agent_thinking event with start status', () => {
+  it('should parse valid agent_thinking event with pending status', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_thinking' as const,
-      status: 'start' as const,
+      status: 'pending' as const,
       content: 'Thinking...',
       iteration: 1,
     };
@@ -195,7 +180,6 @@ describe('AgentCompleteEventSchema', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_complete' as const,
-      status: 'completed' as const,
       final_content: 'Final response',
       total_iterations: 3,
       stop_reason: 'end_turn' as const,
@@ -217,7 +201,6 @@ describe('AgentCompleteEventSchema', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_complete' as const,
-      status: 'completed' as const,
       final_content: 'Response',
       total_iterations: 1,
       stop_reason: 'end_turn' as const,
@@ -233,7 +216,6 @@ describe('AgentErrorEventSchema', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_error' as const,
-      status: 'failed' as const,
       error: 'Something went wrong',
       error_type: 'llm_error' as const,
       iteration: 2,
@@ -251,7 +233,6 @@ describe('AgentAbortEventSchema', () => {
     const event = {
       ...createBaseEvent(),
       type: 'agent_abort' as const,
-      status: 'completed' as const,
       reason: 'User requested abort',
       iteration: 3,
     };
@@ -269,14 +250,13 @@ describe('AgentEventSchema (discriminated union)', () => {
       {
         ...createBaseEvent(),
         type: 'agent_start' as const,
-        status: 'start' as const,
         message: 'Hello',
         enabled_tools: [],
       },
       {
         ...createBaseEvent(),
         type: 'agent_thinking' as const,
-        status: 'start' as const,
+        status: 'pending' as const,
         content: 'Thinking',
         iteration: 1,
       },
@@ -299,7 +279,6 @@ describe('AgentEventSchema (discriminated union)', () => {
       {
         ...createBaseEvent(),
         type: 'agent_complete' as const,
-        status: 'completed' as const,
         final_content: 'Done',
         total_iterations: 1,
         stop_reason: 'end_turn' as const,
@@ -307,14 +286,12 @@ describe('AgentEventSchema (discriminated union)', () => {
       {
         ...createBaseEvent(),
         type: 'agent_error' as const,
-        status: 'failed' as const,
         error: 'Error',
         error_type: 'unknown' as const,
       },
       {
         ...createBaseEvent(),
         type: 'agent_abort' as const,
-        status: 'completed' as const,
         reason: 'Aborted',
         iteration: 1,
       },
@@ -330,7 +307,6 @@ describe('AgentEventSchema (discriminated union)', () => {
     const event = {
       ...createBaseEvent(),
       type: 'unknown',
-      status: 'start',
     };
 
     expect(() => AgentEventSchema.parse(event)).toThrow();

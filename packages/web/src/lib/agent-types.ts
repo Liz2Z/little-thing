@@ -4,7 +4,6 @@
  */
 
 export enum EventStatus {
-  Start = 'start',
   Pending = 'pending',
   Completed = 'completed',
   Failed = 'failed',
@@ -47,12 +46,10 @@ export interface AgentEventBase {
   span_id: string;
   parent_span_id: string | null;
   timestamp: string;
-  status: EventStatus;
 }
 
 export interface AgentStartEvent extends AgentEventBase {
   type: AgentEventType.Start;
-  status: EventStatus.Start;
   message: string;
   enabled_tools: string[];
   max_iterations: number;
@@ -60,21 +57,21 @@ export interface AgentStartEvent extends AgentEventBase {
 
 export interface AgentThinkingEvent extends AgentEventBase {
   type: AgentEventType.Thinking;
-  status: EventStatus.Start | EventStatus.Completed;
+  status: EventStatus.Pending | EventStatus.Completed;
   content: string;
   iteration: number;
 }
 
 export interface AgentContentEvent extends AgentEventBase {
   type: AgentEventType.Content;
-  status: EventStatus.Start | EventStatus.Pending | EventStatus.Completed;
+  status: EventStatus.Pending | EventStatus.Completed;
   content: string;
   iteration: number;
 }
 
 export interface ToolUseEvent extends AgentEventBase {
   type: AgentEventType.ToolUse;
-  status: EventStatus.Start | EventStatus.Pending | EventStatus.Completed | EventStatus.Failed;
+  status: EventStatus.Pending | EventStatus.Completed | EventStatus.Failed;
   tool_use_id: string;
   tool_name: string;
   input: unknown;
@@ -86,7 +83,6 @@ export interface ToolUseEvent extends AgentEventBase {
 
 export interface AgentCompleteEvent extends AgentEventBase {
   type: AgentEventType.Complete;
-  status: EventStatus.Completed;
   final_content: string;
   total_iterations: number;
   stop_reason: AgentStopReason;
@@ -98,7 +94,6 @@ export interface AgentCompleteEvent extends AgentEventBase {
 
 export interface AgentErrorEvent extends AgentEventBase {
   type: AgentEventType.Error;
-  status: EventStatus.Failed;
   error: string;
   error_type: AgentErrorType;
   iteration?: number;
@@ -106,7 +101,6 @@ export interface AgentErrorEvent extends AgentEventBase {
 
 export interface AgentAbortEvent extends AgentEventBase {
   type: AgentEventType.Abort;
-  status: EventStatus.Completed;
   reason: string;
   iteration: number;
 }

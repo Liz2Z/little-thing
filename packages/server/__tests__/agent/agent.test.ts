@@ -1,6 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import type { ToolExecutor } from '../../src/tools/registry.js';
-import type { AgentEvent, AgentStartEvent, AgentCompleteEvent, AgentErrorEvent, AgentAbortEvent, ToolUseEvent } from '../../src/agent/agent-events.schema.js';
+import type { AgentEvent, AgentStartEvent, AgentAbortEvent } from '../../src/agent/events.js';
 
 type StreamTextMock = (...args: any[]) => Promise<{ fullStream: AsyncGenerator<any> }>;
 
@@ -117,7 +117,6 @@ describe('Agent', () => {
       expect(events[0].type).toBe('agent_start');
       const startEvent = events[0] as AgentStartEvent;
       expect(startEvent.message).toBe('Hello');
-      expect(startEvent.status).toBe('start');
     });
 
     it('should use enabledTools from options', async () => {

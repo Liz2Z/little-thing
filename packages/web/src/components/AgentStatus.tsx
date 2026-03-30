@@ -75,7 +75,6 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
 
   const getStatusIcon = () => {
     switch (toolCall.status) {
-      case EventStatus.Start:
       case EventStatus.Pending:
         return <Loader2 className="w-3 h-3 animate-spin text-blue-500" />;
       case EventStatus.Completed:
@@ -87,8 +86,6 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
 
   const getStatusText = () => {
     switch (toolCall.status) {
-      case EventStatus.Start:
-        return '启动中...';
       case EventStatus.Pending:
         return '执行中...';
       case EventStatus.Completed:

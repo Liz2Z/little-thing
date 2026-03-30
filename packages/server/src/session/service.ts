@@ -6,7 +6,7 @@ import type {
   AgentEvent,
   AgentErrorEvent,
   AgentCompleteEvent,
-} from "../agent/agent-events.schema.js";
+} from "../agent/events.js";
 import type { ToolExecutor } from "../tools/registry.js";
 import { ValidationError } from "../errors/base.js";
 
