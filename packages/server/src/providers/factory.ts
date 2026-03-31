@@ -1,30 +1,39 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOpenAI } from '@ai-sdk/openai';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { InternalError, NotFoundError } from '../errors/base.js';
-import modelsData from './models.json';
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { InternalError, NotFoundError } from "../errors/base.js";
+import modelsData from "./models.json";
 
 class UnknownProviderError extends NotFoundError {
   constructor(details?: Record<string, unknown>) {
-    super(['PROVIDER:UNKNOWN', 404, 'Provider 不存在'] as const, details);
+    super(["PROVIDER:UNKNOWN", 404, "Provider 不存在"] as const, details);
   }
 }
 
 class UnsupportedSDKError extends InternalError {
   constructor(details?: Record<string, unknown>) {
-    super(['PROVIDER:UNSUPPORTED_SDK', 500, '不支持的 SDK 类型'] as const, details);
+    super(
+      ["PROVIDER:UNSUPPORTED_SDK", 500, "不支持的 SDK 类型"] as const,
+      details,
+    );
   }
 }
 
 class ProviderAPIError extends InternalError {
   constructor(details?: Record<string, unknown>) {
-    super(['PROVIDER:API_ERROR', 502, 'Provider API 返回错误'] as const, details);
+    super(
+      ["PROVIDER:API_ERROR", 502, "Provider API 返回错误"] as const,
+      details,
+    );
   }
 }
 
 class MissingAPIKeyError extends InternalError {
   constructor(details?: Record<string, unknown>) {
-    super(['PROVIDER:MISSING_API_KEY', 500, 'Provider API Key 未配置'] as const, details);
+    super(
+      ["PROVIDER:MISSING_API_KEY", 500, "Provider API Key 未配置"] as const,
+      details,
+    );
   }
 }
 
@@ -43,7 +52,9 @@ interface ProviderConfig {
  * @throws {InternalError} 当 API key 缺失或 SDK 不支持时抛出错误
  */
 export function createModel(providerId: string, modelId: string): any {
-  const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
+  const providerConfig = (modelsData as Record<string, ProviderConfig>)[
+    providerId
+  ];
 
   if (!providerConfig) {
     throw new UnknownProviderError({ providerId });
@@ -52,7 +63,7 @@ export function createModel(providerId: string, modelId: string): any {
   const apiKey = getApiKey(providerConfig.env);
 
   switch (providerConfig.npm) {
-    case '@ai-sdk/anthropic': {
+    case "@ai-sdk/anthropic": {
       const anthropic = createAnthropic({
         apiKey,
         baseURL: providerConfig.api,
@@ -60,7 +71,7 @@ export function createModel(providerId: string, modelId: string): any {
       return anthropic(modelId);
     }
 
-    case '@ai-sdk/openai': {
+    case "@ai-sdk/openai": {
       const openai = createOpenAI({
         apiKey,
         baseURL: providerConfig.api,
@@ -68,7 +79,7 @@ export function createModel(providerId: string, modelId: string): any {
       return openai(modelId);
     }
 
-    case '@ai-sdk/openai-compatible': {
+    case "@ai-sdk/openai-compatible": {
       const compatible = createOpenAICompatible({
         name: providerId,
         apiKey,
@@ -89,8 +100,12 @@ export function createModel(providerId: string, modelId: string): any {
  * @throws {NotFoundError} 当 provider 不存在时抛出错误
  * @throws {InternalError} 当 API key 缺失或 API 调用失败时抛出错误
  */
-export async function listModels(providerId: string): Promise<Array<{ id: string; created?: number }>> {
-  const providerConfig = (modelsData as Record<string, ProviderConfig>)[providerId];
+export async function listModels(
+  providerId: string,
+): Promise<Array<{ id: string; created?: number }>> {
+  const providerConfig = (modelsData as Record<string, ProviderConfig>)[
+    providerId
+  ];
 
   if (!providerConfig) {
     throw new UnknownProviderError({ providerId });
@@ -100,10 +115,10 @@ export async function listModels(providerId: string): Promise<Array<{ id: string
 
   try {
     const response = await fetch(`${providerConfig.api}/models`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
     });
 

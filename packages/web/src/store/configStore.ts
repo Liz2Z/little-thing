@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface ConfigState {
   apiUrl: string;
@@ -6,6 +6,6 @@ interface ConfigState {
 }
 
 export const useConfigStore = create<ConfigState>()((set) => ({
-  apiUrl: 'http://localhost:3000',
+  apiUrl: "http://localhost:3000",
   setApiUrl: (url) => set({ apiUrl: url }),
 }));

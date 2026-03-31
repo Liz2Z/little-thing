@@ -1,17 +1,15 @@
-import { SessionStore } from "./store.js";
-import type { Session, SessionMeta } from "./session.schema.js";
-import type { Message } from "./message.js";
 import { Agent } from "../agent/agent.js";
 import type {
-  AgentEvent,
-  AgentErrorEvent,
   AgentCompleteEvent,
+  AgentErrorEvent,
+  AgentEvent,
 } from "../agent/events.js";
-import type { ToolExecutor } from "../tools/registry.js";
 import { ValidationError } from "../errors/base.js";
-
-import type { LanguageModel } from "ai";
 import { createModel } from "../providers/factory.js";
+import type { ToolExecutor } from "../tools/registry.js";
+import type { Message } from "./message.js";
+import type { Session, SessionMeta } from "./session.schema.js";
+import type { SessionStore } from "./store.js";
 
 class ProviderRequiredError extends ValidationError {
   constructor() {
@@ -87,7 +85,6 @@ export class SessionService {
     if (!session) {
       const errorEvent: AgentErrorEvent = {
         type: "agent_error",
-        status: "failed",
         error: "Session not found",
         error_type: "unknown",
         run_id: "",
@@ -136,7 +133,6 @@ export class SessionService {
     } catch (error) {
       const errorEvent: AgentErrorEvent = {
         type: "agent_error",
-        status: "failed",
         error: error instanceof Error ? error.message : "Unknown error",
         error_type: "unknown",
         run_id: "",

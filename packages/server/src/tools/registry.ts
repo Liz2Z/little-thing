@@ -1,7 +1,10 @@
-import type { AnyTool } from './types.js';
+import type { AnyTool } from "./types.js";
 
 export interface ToolExecutor {
-  execute(name: string, input: unknown): Promise<{ success: boolean; output?: string; error?: string }>;
+  execute(
+    name: string,
+    input: unknown,
+  ): Promise<{ success: boolean; output?: string; error?: string }>;
   getDefinition(name: string): AnyTool | undefined;
   getAllDefinitions(): AnyTool[];
 }
@@ -31,7 +34,7 @@ export class ToolRegistry implements ToolExecutor {
 
   async execute(
     name: string,
-    input: unknown
+    input: unknown,
   ): Promise<{ success: boolean; output?: string; error?: string }> {
     const tool = this.tools.get(name);
     if (!tool) {
@@ -41,18 +44,21 @@ export class ToolRegistry implements ToolExecutor {
     try {
       const result = await tool.execute(
         `tool_${Date.now()}`,
-        input as Record<string, unknown>
+        input as Record<string, unknown>,
       );
 
-      const textContent = result.content.find(c => c.type === 'text');
+      const textContent = result.content.find((c) => c.type === "text");
       return {
         success: true,
-        output: textContent?.type === 'text' ? textContent.text : JSON.stringify(result.content),
+        output:
+          textContent?.type === "text"
+            ? textContent.text
+            : JSON.stringify(result.content),
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }

@@ -4,16 +4,16 @@
  */
 
 export const EventType = {
-  SESSION_CREATED: 'session:created',
-  SESSION_DELETED: 'session:deleted',
-  SESSION_UPDATED: 'session:updated',
-  MESSAGE_RECEIVED: 'message:received',
-  CHAT_STREAM: 'chat:stream',
-  CHAT_COMPLETE: 'chat:complete',
-  ERROR: 'error',
+  SESSION_CREATED: "session:created",
+  SESSION_DELETED: "session:deleted",
+  SESSION_UPDATED: "session:updated",
+  MESSAGE_RECEIVED: "message:received",
+  CHAT_STREAM: "chat:stream",
+  CHAT_COMPLETE: "chat:complete",
+  ERROR: "error",
 } as const;
 
-export type EventType = typeof EventType[keyof typeof EventType];
+export type EventType = (typeof EventType)[keyof typeof EventType];
 
 export interface Event<T = unknown> {
   type: EventType;
@@ -40,7 +40,7 @@ export interface SessionUpdatedPayload {
 
 export interface MessageReceivedPayload {
   sessionId: string;
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
   timestamp: string;
 }

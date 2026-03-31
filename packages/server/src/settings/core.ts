@@ -1,10 +1,16 @@
-import { z } from 'zod';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'fs';
-import { join, dirname } from 'path';
-import { xdgConfig } from 'xdg-basedir';
-import { homedir } from 'os';
-import { ConfigError, ValidationError } from './errors';
-import { expandEnvVarsInObject } from './env';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import { xdgConfig } from "xdg-basedir";
+import type { z } from "zod";
+import { expandEnvVarsInObject } from "./env";
+import { ConfigError, ValidationError } from "./errors";
 
 type ZodObjectLike = z.ZodObject<any>;
 type Infer<T extends ZodObjectLike> = z.infer<T>;
@@ -14,7 +20,7 @@ export interface SettingsOptions {
   projectPath?: string;
   credentialsPath?: string;
   envPrefix?: string;
-  errorHandling?: 'strict' | 'warn' | 'fallback';
+  errorHandling?: "strict" | "warn" | "fallback";
 }
 
 /**
@@ -22,7 +28,7 @@ export interface SettingsOptions {
  */
 function deepMerge(target: any, source: any): any {
   if (!source) return target;
-  if (!target || typeof target !== 'object') return source;
+  if (!target || typeof target !== "object") return source;
 
   const result = { ...target };
 
@@ -30,10 +36,13 @@ function deepMerge(target: any, source: any): any {
     const targetValue = target[key];
     const sourceValue = source[key];
 
-
     if (Array.isArray(sourceValue)) {
       result[key] = sourceValue;
-    } else if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+    } else if (
+      sourceValue &&
+      typeof sourceValue === "object" &&
+      !Array.isArray(sourceValue)
+    ) {
       result[key] = deepMerge(targetValue || {}, sourceValue);
     } else {
       result[key] = sourceValue;
@@ -52,17 +61,18 @@ function parseCLIArgs(appName: string): Record<string, any> {
 
   process.argv.slice(2).forEach((arg) => {
     if (arg.startsWith(prefix)) {
-      const parts = arg.slice(prefix.length).split('=');
+      const parts = arg.slice(prefix.length).split("=");
       const keyPath = parts[0];
-      let value: any = parts.slice(1).join('=');
+      let value: any = parts.slice(1).join("=");
 
       // 简单的类型转换
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      else if (!isNaN(Number(value)) && value !== '') value = Number(value);
+      if (value === "true") value = true;
+      else if (value === "false") value = false;
+      else if (!Number.isNaN(Number(value)) && value !== "")
+        value = Number(value);
 
       if (keyPath) {
-        const keys = keyPath.split('.');
+        const keys = keyPath.split(".");
         let current = args;
         for (let i = 0; i < keys.length - 1; i++) {
           const k = keys[i];
@@ -86,7 +96,7 @@ function loadEnvConfig(prefix: string): Record<string, any> {
   for (const [key, value] of Object.entries(process.env)) {
     if (!key.startsWith(envPrefix) || value === undefined) continue;
 
-    const keyPath = key.slice(envPrefix.length).toLowerCase().split('_');
+    const keyPath = key.slice(envPrefix.length).toLowerCase().split("_");
     let current = config;
 
     for (let i = 0; i < keyPath.length - 1; i++) {
@@ -118,7 +128,7 @@ function createAccessor<T>(
   getData: () => any,
   setData: (path: string[], value: any) => void,
   watchData: (path: string[], callback: (value: any) => void) => () => void,
-  path: string[] = []
+  path: string[] = [],
 ): Accessor<T> {
   const target = {
     get(key?: string) {
@@ -142,13 +152,11 @@ function createAccessor<T>(
     get(obj: any, prop: string | symbol) {
       if (prop in obj) return obj[prop];
 
-      if (typeof prop === 'string') {
-        return createAccessor(
-          () => getData()?.[prop],
-          setData,
-          watchData,
-          [...path, prop]
-        );
+      if (typeof prop === "string") {
+        return createAccessor(() => getData()?.[prop], setData, watchData, [
+          ...path,
+          prop,
+        ]);
       }
     },
   }) as Accessor<T>;
@@ -159,7 +167,8 @@ export class Settings<T extends ZodObjectLike> {
   private appName: string;
   private options: SettingsOptions;
   private data: Infer<T> | null = null;
-  private listeners: Set<{ path: string[]; callback: (value: any) => void }> = new Set();
+  private listeners: Set<{ path: string[]; callback: (value: any) => void }> =
+    new Set();
   private accessor: Accessor<Infer<T>> | null = null;
 
   constructor(appName: string, schema: T, options: SettingsOptions = {}) {
@@ -169,10 +178,15 @@ export class Settings<T extends ZodObjectLike> {
   }
 
   private getPaths() {
-    const configDir = xdgConfig ?? join(homedir(), '.config');
-    const globalSettingsPath = this.options.globalPath ?? join(configDir, this.appName, 'settings.json');
-    const globalCredentialsPath = this.options.credentialsPath ?? join(configDir, this.appName, 'credentials.json');
-    const localSettingsPath = this.options.projectPath ?? join(process.cwd(), `.${this.appName}`, 'settings.json');
+    const configDir = xdgConfig ?? join(homedir(), ".config");
+    const globalSettingsPath =
+      this.options.globalPath ?? join(configDir, this.appName, "settings.json");
+    const globalCredentialsPath =
+      this.options.credentialsPath ??
+      join(configDir, this.appName, "credentials.json");
+    const localSettingsPath =
+      this.options.projectPath ??
+      join(process.cwd(), `.${this.appName}`, "settings.json");
 
     return {
       global: globalSettingsPath,
@@ -196,16 +210,16 @@ export class Settings<T extends ZodObjectLike> {
     // 0. 获取默认值作为基础层
     try {
       merged = this.schema.parse({});
-    } catch (e) {
+    } catch (_e) {
       // 如果无法解析空对象获取默认值，则从空对象开始
     }
 
     // 1. 加载全局配置
     if (existsSync(paths.global)) {
       try {
-        const content = JSON.parse(readFileSync(paths.global, 'utf-8'));
+        const content = JSON.parse(readFileSync(paths.global, "utf-8"));
         merged = deepMerge(merged, content);
-      } catch (e) { }
+      } catch (_e) {}
     }
 
     // 2. 加载 Credentials
@@ -215,22 +229,24 @@ export class Settings<T extends ZodObjectLike> {
         try {
           chmodSync(paths.credentials, 0o600);
         } catch (e) {
-          console.error(e)
+          console.error(e);
         }
 
-        const credentials = JSON.parse(readFileSync(paths.credentials, 'utf-8'));
+        const credentials = JSON.parse(
+          readFileSync(paths.credentials, "utf-8"),
+        );
         merged = deepMerge(merged, credentials);
       } catch (e) {
-        console.log(e)
+        console.log(e);
       }
     }
 
     // 3. 加载本地配置
     if (existsSync(paths.local)) {
       try {
-        const content = JSON.parse(readFileSync(paths.local, 'utf-8'));
+        const content = JSON.parse(readFileSync(paths.local, "utf-8"));
         merged = deepMerge(merged, content);
-      } catch (e) { }
+      } catch (_e) {}
     }
 
     // 4. 加载环境变量
@@ -245,15 +261,16 @@ export class Settings<T extends ZodObjectLike> {
     // 环境变量展开
     merged = expandEnvVarsInObject(merged);
 
-
     // 校验
     try {
       this.data = this.schema.parse(merged);
     } catch (error: any) {
-      if (this.options.errorHandling === 'strict') {
+      if (this.options.errorHandling === "strict") {
         throw new ValidationError(`Invalid settings: ${error.message}`);
       }
-      console.warn(`[Config] Invalid settings: ${error.message}. Using defaults where possible.`);
+      console.warn(
+        `[Config] Invalid settings: ${error.message}. Using defaults where possible.`,
+      );
       this.data = this.schema.parse({});
     }
   }
@@ -263,19 +280,19 @@ export class Settings<T extends ZodObjectLike> {
       this.accessor = createAccessor<Infer<T>>(
         () => this.data,
         (path, value) => this.setPath(path, value),
-        (path, callback) => this.watchPath(path, callback)
+        (path, callback) => this.watchPath(path, callback),
       );
     }
     return this.accessor;
   }
 
   get(): Infer<T> {
-    if (!this.data) throw new ConfigError('Not loaded');
+    if (!this.data) throw new ConfigError("Not loaded");
     return this.data;
   }
 
   private setPath(path: string[], value: any) {
-    if (!this.data) throw new ConfigError('Config not loaded');
+    if (!this.data) throw new ConfigError("Config not loaded");
 
     let current = this.data as any;
     for (let i = 0; i < path.length - 1; i++) {
@@ -300,7 +317,8 @@ export class Settings<T extends ZodObjectLike> {
 
   private notify(changedPath: string[]) {
     for (const listener of this.listeners) {
-      const isMatch = listener.path.every((p, i) => changedPath[i] === p) ||
+      const isMatch =
+        listener.path.every((p, i) => changedPath[i] === p) ||
         changedPath.every((p, i) => listener.path[i] === p);
 
       if (isMatch) {
@@ -330,7 +348,7 @@ export class Settings<T extends ZodObjectLike> {
       mkdirSync(dir, { recursive: true });
     }
 
-    writeFileSync(paths.global, JSON.stringify(this.data, null, 2), 'utf-8');
+    writeFileSync(paths.global, JSON.stringify(this.data, null, 2), "utf-8");
   }
 
   getRaw(): Infer<T> | null {

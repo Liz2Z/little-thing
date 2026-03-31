@@ -3,14 +3,14 @@
  * 提供在 React 组件中使用服务器推送事件的能力
  */
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { SSEClient, type EventMap } from '@/lib/sse-client';
-import { EventBus } from '@/lib/eventBus';
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { EventBus } from "@/lib/eventBus";
+import { type EventMap, SSEClient } from "@/lib/sse-client";
 
 export type { EventMap };
 
 interface ServerEventContextValue {
-  status: 'connected' | 'connecting' | 'disconnected';
+  status: "connected" | "connecting" | "disconnected";
   eventBus: EventBus<EventMap>;
 }
 
@@ -18,10 +18,15 @@ const ServerEventContext = createContext<ServerEventContextValue | null>(null);
 
 let globalSSEClient: SSEClient | null = null;
 let globalEventBus: EventBus<EventMap> | null = null;
-let globalStatus: 'connected' | 'connecting' | 'disconnected' = 'disconnected';
-let globalStatusListeners: Set<(status: 'connected' | 'connecting' | 'disconnected') => void> = new Set();
+let globalStatus: "connected" | "connecting" | "disconnected" = "disconnected";
+const globalStatusListeners: Set<
+  (status: "connected" | "connecting" | "disconnected") => void
+> = new Set();
 
-function createSSEConnection(): { client: SSEClient; eventBus: EventBus<EventMap> } {
+function createSSEConnection(): {
+  client: SSEClient;
+  eventBus: EventBus<EventMap>;
+} {
   if (globalSSEClient && globalEventBus) {
     return { client: globalSSEClient, eventBus: globalEventBus };
   }
@@ -31,29 +36,38 @@ function createSSEConnection(): { client: SSEClient; eventBus: EventBus<EventMap
 
   const client = new SSEClient();
   globalSSEClient = client;
-  globalStatus = 'connecting';
-  globalStatusListeners.forEach(cb => cb(globalStatus));
+  globalStatus = "connecting";
+  globalStatusListeners.forEach((cb) => cb(globalStatus));
 
   client.subscribeAll((event) => {
     eventBus.emit(event.type as keyof EventMap, event.payload);
   });
 
-  client.connect().then(() => {
-    globalStatus = 'connected';
-    globalStatusListeners.forEach(cb => cb(globalStatus));
-  }).catch((error) => {
-    console.error('服务器事件连接失败:', error);
-    globalStatus = 'disconnected';
-    globalStatusListeners.forEach(cb => cb(globalStatus));
-    globalSSEClient = null;
-    globalEventBus = null;
-  });
+  client
+    .connect()
+    .then(() => {
+      globalStatus = "connected";
+      globalStatusListeners.forEach((cb) => cb(globalStatus));
+    })
+    .catch((error) => {
+      console.error("服务器事件连接失败:", error);
+      globalStatus = "disconnected";
+      globalStatusListeners.forEach((cb) => cb(globalStatus));
+      globalSSEClient = null;
+      globalEventBus = null;
+    });
 
   return { client, eventBus };
 }
 
-export function ServerEventProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'connected' | 'connecting' | 'disconnected'>(globalStatus);
+export function ServerEventProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [status, setStatus] = useState<
+    "connected" | "connecting" | "disconnected"
+  >(globalStatus);
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -85,7 +99,7 @@ export function ServerEventProvider({ children }: { children: React.ReactNode })
 export function useServerEvent() {
   const context = useContext(ServerEventContext);
   if (!context) {
-    throw new Error('useServerEvent must be used within a ServerEventProvider');
+    throw new Error("useServerEvent must be used within a ServerEventProvider");
   }
   return context;
 }
@@ -93,22 +107,22 @@ export function useServerEvent() {
 export function useOnEvent<K extends keyof EventMap>(
   eventType: K,
   callback: (payload: EventMap[K]) => void,
-  deps: React.DependencyList = []
+  deps: React.DependencyList = [],
 ) {
   const { eventBus } = useServerEvent();
 
   useEffect(() => {
     return eventBus.on(eventType, callback);
-  }, [eventBus, eventType, ...deps]);
+  }, [eventBus, eventType, ...deps, callback]);
 }
 
 export function useOnAllEvents(
   callback: (payload: unknown) => void,
-  deps: React.DependencyList = []
+  deps: React.DependencyList = [],
 ) {
   const { eventBus } = useServerEvent();
 
   useEffect(() => {
     return eventBus.onAll(callback);
-  }, [eventBus, ...deps]);
+  }, [eventBus, ...deps, callback]);
 }

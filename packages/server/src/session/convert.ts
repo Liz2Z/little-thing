@@ -1,5 +1,5 @@
-import type { CoreMessage } from 'ai';
-import type { Message, MessageContent, TextContent, ToolUseContent, ToolResultContent } from './message.js';
+import type { CoreMessage } from "ai";
+import type { Message, MessageContent, ToolUseContent } from "./message.js";
 
 export function toCoreMessages(messages: Message[]): CoreMessage[] {
   return messages.map((msg) => convertMessage(msg));
@@ -9,33 +9,36 @@ function convertMessage(message: Message): CoreMessage {
   const { role, content } = message;
 
   switch (content.type) {
-    case 'text':
-      return { role: role as 'user' | 'assistant' | 'system', content: content.text };
-    case 'tool_use':
+    case "text":
       return {
-        role: role as 'assistant',
+        role: role as "user" | "assistant" | "system",
+        content: content.text,
+      };
+    case "tool_use":
+      return {
+        role: role as "assistant",
         content: [convertToolUseContent(content)],
       };
-    case 'tool_result':
+    case "tool_result":
       return {
-        role: 'tool',
+        role: "tool",
         content: [
           {
-            type: 'tool-result',
+            type: "tool-result",
             toolCallId: content.tool_use_id,
             toolName: content.tool_name,
-            output: { type: 'text', value: content.content },
+            output: { type: "text", value: content.content },
           },
         ],
       };
     default:
-      return { role: role as 'user' | 'assistant' | 'system', content: '' };
+      return { role: role as "user" | "assistant" | "system", content: "" };
   }
 }
 
 function convertToolUseContent(item: ToolUseContent): any {
   return {
-    type: 'tool-call',
+    type: "tool-call",
     toolCallId: item.id,
     toolName: item.name,
     args: item.input,
@@ -43,17 +46,17 @@ function convertToolUseContent(item: ToolUseContent): any {
 }
 
 export function getTextContent(content: MessageContent): string {
-  if (content.type === 'text') {
+  if (content.type === "text") {
     return content.text;
   }
 
-  if (content.type === 'tool_use') {
+  if (content.type === "tool_use") {
     return `${content.name}(${JSON.stringify(content.input)})`;
   }
 
-  if (content.type === 'tool_result') {
+  if (content.type === "tool_result") {
     return content.content;
   }
 
-  return '';
+  return "";
 }

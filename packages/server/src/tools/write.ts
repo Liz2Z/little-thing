@@ -1,19 +1,19 @@
-import { z } from 'zod';
-import { mkdir as fsMkdir, writeFile as fsWriteFile } from 'fs/promises';
-import { dirname } from 'path';
-import type { ToolDefinition } from './types.js';
-import { resolveToCwd } from './path-utils.js';
-import { ValidationError } from '../errors/base.js';
+import { mkdir as fsMkdir, writeFile as fsWriteFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { z } from "zod";
+import { ValidationError } from "../errors/base.js";
+import { resolveToCwd } from "./path-utils.js";
+import type { ToolDefinition } from "./types.js";
 
 class ToolAbortedError extends ValidationError {
   constructor() {
-    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+    super(["TOOL:ABORTED", 200, "操作被中断"] as const);
   }
 }
 
 const writeSchema = z.object({
-  path: z.string().describe('Path to the file to write (relative or absolute)'),
-  content: z.string().describe('Content to write to the file'),
+  path: z.string().describe("Path to the file to write (relative or absolute)"),
+  content: z.string().describe("Content to write to the file"),
 });
 
 export type WriteToolInput = z.infer<typeof writeSchema>;
@@ -24,7 +24,7 @@ export interface WriteOperations {
 }
 
 const defaultWriteOperations: WriteOperations = {
-  writeFile: (path, content) => fsWriteFile(path, content, 'utf-8'),
+  writeFile: (path, content) => fsWriteFile(path, content, "utf-8"),
   mkdir: (dir) => fsMkdir(dir, { recursive: true }).then(() => {}),
 };
 
@@ -32,14 +32,17 @@ export interface WriteToolOptions {
   operations?: WriteOperations;
 }
 
-export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition<typeof writeSchema> {
+export function createWriteTool(
+  cwd: string,
+  options?: WriteToolOptions,
+): ToolDefinition<typeof writeSchema> {
   const ops = options?.operations ?? defaultWriteOperations;
 
   return {
-    name: 'write',
-    label: 'write',
+    name: "write",
+    label: "write",
     description:
-      'Write content to a file. Creates the file if it doesn\'t exist, overwrites if it does. Automatically creates parent directories.',
+      "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
     parameters: writeSchema,
     execute: async (
       _toolCallId: string,
@@ -49,58 +52,64 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
       const absolutePath = resolveToCwd(path, cwd);
       const dir = dirname(absolutePath);
 
-      return new Promise<{ content: Array<{ type: 'text'; text: string }>; details: undefined }>(
-        (resolve, reject) => {
-          if (signal?.aborted) {
-            reject(new ToolAbortedError());
-            return;
-          }
+      return new Promise<{
+        content: Array<{ type: "text"; text: string }>;
+        details: undefined;
+      }>((resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new ToolAbortedError());
+          return;
+        }
 
-          let aborted = false;
+        let aborted = false;
 
-          const onAbort = () => {
-            aborted = true;
-            reject(new ToolAbortedError());
-          };
+        const onAbort = () => {
+          aborted = true;
+          reject(new ToolAbortedError());
+        };
 
-          if (signal) {
-            signal.addEventListener('abort', onAbort, { once: true });
-          }
+        if (signal) {
+          signal.addEventListener("abort", onAbort, { once: true });
+        }
 
-          (async () => {
-            try {
-              await ops.mkdir(dir);
+        (async () => {
+          try {
+            await ops.mkdir(dir);
 
-              if (aborted) {
-                return;
-              }
-
-              await ops.writeFile(absolutePath, content);
-
-              if (aborted) {
-                return;
-              }
-
-              if (signal) {
-                signal.removeEventListener('abort', onAbort);
-              }
-
-              resolve({
-                content: [{ type: 'text', text: `Successfully wrote ${content.length} bytes to ${path}` }],
-                details: undefined,
-              });
-            } catch (error: any) {
-              if (signal) {
-                signal.removeEventListener('abort', onAbort);
-              }
-
-              if (!aborted) {
-                reject(error);
-              }
+            if (aborted) {
+              return;
             }
-          })();
-        },
-      );
+
+            await ops.writeFile(absolutePath, content);
+
+            if (aborted) {
+              return;
+            }
+
+            if (signal) {
+              signal.removeEventListener("abort", onAbort);
+            }
+
+            resolve({
+              content: [
+                {
+                  type: "text",
+                  text: `Successfully wrote ${content.length} bytes to ${path}`,
+                },
+              ],
+              details: undefined,
+            });
+          } catch (error: any) {
+            if (signal) {
+              signal.removeEventListener("abort", onAbort);
+            }
+
+            if (!aborted) {
+              reject(error);
+            }
+          }
+        })();
+      });
     },
   };
 }

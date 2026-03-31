@@ -1,12 +1,12 @@
-import { accessSync, constants } from 'node:fs';
-import * as os from 'node:os';
-import { isAbsolute, resolve as resolvePath } from 'node:path';
+import { accessSync, constants } from "node:fs";
+import * as os from "node:os";
+import { isAbsolute, resolve as resolvePath } from "node:path";
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
-const NARROW_NO_BREAK_SPACE = '\u202F';
+const NARROW_NO_BREAK_SPACE = "\u202F";
 
 function normalizeUnicodeSpaces(str: string): string {
-  return str.replace(UNICODE_SPACES, ' ');
+  return str.replace(UNICODE_SPACES, " ");
 }
 
 function tryMacOSScreenshotPath(filePath: string): string {
@@ -14,11 +14,11 @@ function tryMacOSScreenshotPath(filePath: string): string {
 }
 
 function tryNFDVariant(filePath: string): string {
-  return filePath.normalize('NFD');
+  return filePath.normalize("NFD");
 }
 
 function tryCurlyQuoteVariant(filePath: string): string {
-  return filePath.replace(/'/g, '\u2019');
+  return filePath.replace(/'/g, "\u2019");
 }
 
 function fileExists(filePath: string): boolean {
@@ -31,15 +31,15 @@ function fileExists(filePath: string): boolean {
 }
 
 function normalizeAtPrefix(filePath: string): string {
-  return filePath.startsWith('@') ? filePath.slice(1) : filePath;
+  return filePath.startsWith("@") ? filePath.slice(1) : filePath;
 }
 
 export function expandPath(filePath: string): string {
   const normalized = normalizeUnicodeSpaces(normalizeAtPrefix(filePath));
-  if (normalized === '~') {
+  if (normalized === "~") {
     return os.homedir();
   }
-  if (normalized.startsWith('~/')) {
+  if (normalized.startsWith("~/")) {
     return os.homedir() + normalized.slice(1);
   }
   return normalized;

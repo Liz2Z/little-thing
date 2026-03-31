@@ -1,1 +1,1 @@
-export { createModel } from './factory.js';
+export { createModel } from "./factory.js";

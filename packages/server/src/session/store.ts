@@ -1,10 +1,10 @@
-import { JsonStore, JsonlStore } from '../storage/index.js';
-import type { SessionMeta, SessionIndex, Session } from './session.schema.js';
-import type { Message } from './message.js';
-import { settings } from '../settings';
+import { settings } from "../settings";
+import { JsonlStore, JsonStore } from "../storage/index.js";
+import type { Message } from "./message.js";
+import type { Session, SessionIndex, SessionMeta } from "./session.schema.js";
 
 function generateId(): string {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = Math.random().toString(36).slice(2, 8);
   return `${date}-${random}`;
 }
@@ -19,9 +19,9 @@ export class SessionStore {
 
   constructor() {
     this.indexStore = new JsonStore<SessionIndex>(
-      'index.json',
+      "index.json",
       { sessions: {} },
-      { category: 'data', subDir: 'sessions' }
+      { category: "data", subDir: "sessions" },
     );
   }
 
@@ -30,9 +30,9 @@ export class SessionStore {
       this.messageStores.set(
         sessionId,
         new JsonlStore<Message>(`${sessionId}.jsonl`, {
-          category: 'data',
-          subDir: 'sessions',
-        })
+          category: "data",
+          subDir: "sessions",
+        }),
       );
     }
     return this.messageStores.get(sessionId)!;
@@ -49,7 +49,8 @@ export class SessionStore {
   listSessions(): SessionMeta[] {
     const index = this.indexStore.load();
     return Object.values(index.sessions).sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }
 
@@ -57,7 +58,8 @@ export class SessionStore {
     const index = this.indexStore.load();
     const id = generateId();
     const now = new Date().toISOString();
-    const sessionName = name || `会话-${Object.keys(index.sessions).length + 1}`;
+    const sessionName =
+      name || `会话-${Object.keys(index.sessions).length + 1}`;
     const llm = settings.llm.get();
 
     const meta: SessionMeta = {
@@ -76,7 +78,7 @@ export class SessionStore {
     return meta;
   }
 
-  addMessage(sessionId: string, message: Omit<Message, 'id'>): boolean {
+  addMessage(sessionId: string, message: Omit<Message, "id">): boolean {
     const index = this.indexStore.load();
     const meta = index.sessions[sessionId];
     if (!meta) return false;
@@ -121,11 +123,17 @@ export class SessionStore {
     return true;
   }
 
-  forkSession(sourceSessionId: string, messageId: string, name?: string): SessionMeta | null {
+  forkSession(
+    sourceSessionId: string,
+    messageId: string,
+    name?: string,
+  ): SessionMeta | null {
     const sourceSession = this.getSession(sourceSessionId);
     if (!sourceSession) return null;
 
-    const messageIndex = sourceSession.messages.findIndex(m => m.id === messageId);
+    const messageIndex = sourceSession.messages.findIndex(
+      (m) => m.id === messageId,
+    );
     if (messageIndex === -1) return null;
 
     const index = this.indexStore.load();
@@ -166,7 +174,7 @@ export class SessionStore {
     const session = this.getSession(sessionId);
     if (!session) return false;
 
-    const messageIndex = session.messages.findIndex(m => m.id === messageId);
+    const messageIndex = session.messages.findIndex((m) => m.id === messageId);
     if (messageIndex === -1) return false;
 
     const index = this.indexStore.load();

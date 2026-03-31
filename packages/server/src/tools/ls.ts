@@ -1,38 +1,52 @@
-import { z } from 'zod';
-import { existsSync, readdirSync, statSync } from 'fs';
-import nodePath from 'path';
-import type { ToolDefinition, ToolExecutionResult } from './types.js';
-import { resolveToCwd } from './path-utils.js';
-import { DEFAULT_MAX_BYTES, formatSize, TruncationResultSchema, truncateHead } from './truncate.js';
-import { ValidationError, ForbiddenError } from '../errors/base.js';
+import { existsSync, readdirSync, statSync } from "node:fs";
+import nodePath from "node:path";
+import { z } from "zod";
+import { ForbiddenError, ValidationError } from "../errors/base.js";
+import { resolveToCwd } from "./path-utils.js";
+import {
+  DEFAULT_MAX_BYTES,
+  formatSize,
+  TruncationResultSchema,
+  truncateHead,
+} from "./truncate.js";
+import type { ToolDefinition } from "./types.js";
 
 class ToolAbortedError extends ValidationError {
   constructor() {
-    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+    super(["TOOL:ABORTED", 200, "操作被中断"] as const);
   }
 }
 
 class FileNotFoundError extends ValidationError {
   constructor(path: string) {
-    super(['TOOL:FILE_NOT_FOUND', 400, '文件不存在'] as const, { path });
+    super(["TOOL:FILE_NOT_FOUND", 400, "文件不存在"] as const, { path });
   }
 }
 
 class NotADirectoryError extends ValidationError {
   constructor(path: string) {
-    super(['TOOL:NOT_A_DIRECTORY', 400, '不是目录'] as const, { path });
+    super(["TOOL:NOT_A_DIRECTORY", 400, "不是目录"] as const, { path });
   }
 }
 
 class PermissionDeniedError extends ForbiddenError {
   constructor(path: string, reason: string) {
-    super(['TOOL:PERMISSION_DENIED', 403, '权限不足'] as const, { path, reason });
+    super(["TOOL:PERMISSION_DENIED", 403, "权限不足"] as const, {
+      path,
+      reason,
+    });
   }
 }
 
 const lsSchema = z.object({
-  path: z.string().describe('Directory to list (default: current directory)').optional(),
-  limit: z.number().describe('Maximum number of entries to return (default: 500)').optional(),
+  path: z
+    .string()
+    .describe("Directory to list (default: current directory)")
+    .optional(),
+  limit: z
+    .number()
+    .describe("Maximum number of entries to return (default: 500)")
+    .optional(),
 });
 
 export type LsToolInput = z.infer<typeof lsSchema>;
@@ -48,7 +62,9 @@ export type LsToolDetails = z.infer<typeof LsToolDetailsSchema>;
 // DI 契约，保留 TS interface
 export interface LsOperations {
   exists: (absolutePath: string) => Promise<boolean> | boolean;
-  stat: (absolutePath: string) => Promise<{ isDirectory: () => boolean }> | { isDirectory: () => boolean };
+  stat: (
+    absolutePath: string,
+  ) => Promise<{ isDirectory: () => boolean }> | { isDirectory: () => boolean };
   readdir: (absolutePath: string) => Promise<string[]> | string[];
 }
 
@@ -62,12 +78,15 @@ export interface LsToolOptions {
   operations?: LsOperations;
 }
 
-export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefinition<typeof lsSchema, LsToolDetails> {
+export function createLsTool(
+  cwd: string,
+  options?: LsToolOptions,
+): ToolDefinition<typeof lsSchema, LsToolDetails> {
   const ops = options?.operations ?? defaultLsOperations;
 
   return {
-    name: 'ls',
-    label: 'ls',
+    name: "ls",
+    label: "ls",
     description: `List directory contents. Returns entries sorted alphabetically, with '/' suffix for directories. Includes dotfiles. Output is truncated to ${DEFAULT_LIMIT} entries or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first).`,
     parameters: lsSchema,
     execute: async (
@@ -82,11 +101,11 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
         }
 
         const onAbort = () => reject(new ToolAbortedError());
-        signal?.addEventListener('abort', onAbort, { once: true });
+        signal?.addEventListener("abort", onAbort, { once: true });
 
         (async () => {
           try {
-            const dirPath = resolveToCwd(path || '.', cwd);
+            const dirPath = resolveToCwd(path || ".", cwd);
             const effectiveLimit = limit ?? DEFAULT_LIMIT;
 
             if (!(await ops.exists(dirPath))) {
@@ -108,7 +127,9 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
               return;
             }
 
-            entries.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            entries.sort((a, b) =>
+              a.toLowerCase().localeCompare(b.toLowerCase()),
+            );
 
             const results: string[] = [];
             let entryLimitReached = false;
@@ -120,12 +141,12 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
               }
 
               const fullPath = nodePath.join(dirPath, entry);
-              let suffix = '';
+              let suffix = "";
 
               try {
                 const entryStat = await ops.stat(fullPath);
                 if (entryStat.isDirectory()) {
-                  suffix = '/';
+                  suffix = "/";
                 }
               } catch {
                 continue;
@@ -134,15 +155,20 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
               results.push(entry + suffix);
             }
 
-            signal?.removeEventListener('abort', onAbort);
+            signal?.removeEventListener("abort", onAbort);
 
             if (results.length === 0) {
-              resolve({ content: [{ type: 'text', text: '(empty directory)' }], details: undefined });
+              resolve({
+                content: [{ type: "text", text: "(empty directory)" }],
+                details: undefined,
+              });
               return;
             }
 
-            const rawOutput = results.join('\n');
-            const truncation = truncateHead(rawOutput, { maxLines: Number.MAX_SAFE_INTEGER });
+            const rawOutput = results.join("\n");
+            const truncation = truncateHead(rawOutput, {
+              maxLines: Number.MAX_SAFE_INTEGER,
+            });
 
             let output = truncation.content;
             const details: LsToolDetails = {};
@@ -150,7 +176,9 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             const notices: string[] = [];
 
             if (entryLimitReached) {
-              notices.push(`${effectiveLimit} entries limit reached. Use limit=${effectiveLimit * 2} for more`);
+              notices.push(
+                `${effectiveLimit} entries limit reached. Use limit=${effectiveLimit * 2} for more`,
+              );
               details.entryLimitReached = effectiveLimit;
             }
 
@@ -160,15 +188,15 @@ export function createLsTool(cwd: string, options?: LsToolOptions): ToolDefiniti
             }
 
             if (notices.length > 0) {
-              output += `\n\n[${notices.join('. ')}]`;
+              output += `\n\n[${notices.join(". ")}]`;
             }
 
             resolve({
-              content: [{ type: 'text', text: output }],
+              content: [{ type: "text", text: output }],
               details: Object.keys(details).length > 0 ? details : undefined,
             });
           } catch (e: any) {
-            signal?.removeEventListener('abort', onAbort);
+            signal?.removeEventListener("abort", onAbort);
             reject(e);
           }
         })();

@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Send, CornerDownLeft } from 'lucide-react';
-import { useSessionStore } from '@/store/sessionStore';
+import { CornerDownLeft, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useSessionStore } from "@/store/sessionStore";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -22,8 +22,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   // Clear store when message is sent
   useEffect(() => {
-    if (message === '' && inputText !== '') {
-      setInputText('');
+    if (message === "" && inputText !== "") {
+      setInputText("");
     }
   }, [message, inputText, setInputText]);
 
@@ -35,13 +35,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     e.preventDefault();
     if (message.trim() && !disabled) {
       onSend(message.trim());
-      setMessage('');
-      setInputText('');
+      setMessage("");
+      setInputText("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }

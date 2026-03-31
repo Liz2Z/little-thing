@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
-import type { IJsonStore, JsonStorageOptions } from './types.js';
-import { resolvePath, type StorageCategory } from './base.js';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { resolvePath, type StorageCategory } from "./base.js";
+import type { IJsonStore, JsonStorageOptions } from "./types.js";
 
 export class JsonStore<T> implements IJsonStore<T> {
   private filePath: string;
@@ -10,9 +10,12 @@ export class JsonStore<T> implements IJsonStore<T> {
   constructor(
     filename: string,
     defaultValue: T,
-    options: JsonStorageOptions & { category?: StorageCategory; subDir?: string } = {}
+    options: JsonStorageOptions & {
+      category?: StorageCategory;
+      subDir?: string;
+    } = {},
   ) {
-    const { category = 'data', subDir, pretty = true } = options;
+    const { category = "data", subDir, pretty = true } = options;
     this.filePath = resolvePath(filename, category, subDir);
     this.defaultValue = defaultValue;
     this.pretty = pretty;
@@ -23,7 +26,7 @@ export class JsonStore<T> implements IJsonStore<T> {
       return this.defaultValue;
     }
     try {
-      const content = readFileSync(this.filePath, 'utf-8');
+      const content = readFileSync(this.filePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return this.defaultValue;
@@ -31,7 +34,9 @@ export class JsonStore<T> implements IJsonStore<T> {
   }
 
   save(data: T): void {
-    const content = this.pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
+    const content = this.pretty
+      ? JSON.stringify(data, null, 2)
+      : JSON.stringify(data);
     writeFileSync(this.filePath, content);
   }
 

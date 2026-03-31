@@ -1,6 +1,96 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source "../../node_modules/streamdown/dist/**/*.js";
+@source "../../node_modules/@streamdown/code/dist/**/*.js";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* shadcn/ui color tokens */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  /* Primary rose palette */
+  --color-primary-50: hsl(var(--rose-50));
+  --color-primary-100: hsl(var(--rose-100));
+  --color-primary-200: hsl(var(--rose-200));
+  --color-primary-500: hsl(var(--rose-500));
+  --color-primary-600: hsl(var(--rose-600));
+  --color-primary-700: hsl(var(--rose-700));
+  --color-primary-900: hsl(var(--rose-900));
+
+  /* Warm gray / stone palette */
+  --color-stone-50: hsl(var(--warm-gray-50));
+  --color-stone-100: hsl(var(--warm-gray-100));
+  --color-stone-200: hsl(var(--warm-gray-200));
+  --color-stone-300: hsl(var(--warm-gray-300));
+  --color-stone-400: hsl(var(--warm-gray-400));
+  --color-stone-500: hsl(var(--warm-gray-500));
+  --color-stone-600: hsl(var(--warm-gray-600));
+  --color-stone-700: hsl(var(--warm-gray-700));
+  --color-stone-800: hsl(var(--warm-gray-800));
+  --color-stone-900: hsl(var(--warm-gray-900));
+
+  /* Message bubble colors */
+  --color-message-user-bg: hsl(var(--rose-100));
+  --color-message-user-fg: hsl(var(--rose-900));
+  --color-message-assistant-bg: hsl(var(--card));
+  --color-message-assistant-fg: hsl(var(--foreground));
+
+  /* Border radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Custom shadows */
+  --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-subtle-sm: 0 1px 1px 0 rgb(0 0 0 / 0.02);
+
+  /* Custom animations */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-in: slide-in 0.3s ease-out;
+
+  /* Transition timing */
+  --timing-subtle: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 
 @layer base {
   :root {
@@ -37,7 +127,7 @@
     --rose-600: 6 58% 48%;
     --rose-700: 4 55% 42%;
     --rose-900: 2 45% 28%;
-    
+
     /* 低饱和暖灰色系 */
     --warm-gray-50: 30 15% 97%;
     --warm-gray-100: 30 12% 94%;
@@ -82,7 +172,7 @@
     --rose-600: 8 58% 65%;
     --rose-700: 10 55% 72%;
     --rose-900: 12 45% 88%;
-    
+
     --warm-gray-50: 30 10% 18%;
     --warm-gray-100: 30 10% 22%;
     --warm-gray-200: 30 10% 28%;
@@ -100,43 +190,28 @@
   * {
     @apply border-border;
   }
-  html, body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  html,
+  body {
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", sans-serif;
     overflow: hidden;
     height: 100%;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
 @layer utilities {
-  /* 极淡阴影 */
-  .shadow-subtle {
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  }
-  
-  .shadow-subtle-sm {
-    box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.02);
-  }
-
-  /* 去掉代码块边框 */
-  
-  [data-streamdown="code-block-actions"] {
-    border: none !important;
-    margin-right: 1px
-  }
-  
-  /* [data-streamdown="code-block-body"] {
-    border: none !important;
-  } */
-
   /* 消息气泡圆角 */
   .rounded-message-user {
     border-radius: 0.75rem 0.75rem 0.25rem 0.75rem;
   }
-  
+
   .rounded-message-assistant {
     border-radius: 0.75rem 0.75rem 0.75rem 0.25rem;
   }
@@ -156,5 +231,11 @@
     transition-property: color, background-color, border-color;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
+  }
+
+  /* streamdown 样式覆盖 */
+  [data-streamdown="code-block-actions"] {
+    border: none;
+    margin-right: 1px;
   }
 }

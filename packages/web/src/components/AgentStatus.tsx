@@ -1,7 +1,14 @@
-import { useSessionStore } from '@/store/sessionStore';
-import { EventStatus, type ToolUseEvent } from '@/lib/agent-types';
-import { Loader2, CheckCircle, XCircle, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import {
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Wrench,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { EventStatus, type ToolUseEvent } from "@/lib/agent-types";
+import { useSessionStore } from "@/store/sessionStore";
 
 export function AgentStatus() {
   const agentRunState = useSessionStore((state) => state.agentRunState);
@@ -18,7 +25,7 @@ export function AgentStatus() {
             💭 {agentRunState.thinking}
           </div>
         )}
-        
+
         {agentRunState?.toolCalls && agentRunState.toolCalls.size > 0 && (
           <div className="space-y-1">
             {Array.from(agentRunState.toolCalls.values()).map((toolCall) => (
@@ -42,24 +49,25 @@ export function AgentStatus() {
           </div>
         )}
 
-        {agentRunState?.status === 'completed' && agentRunState.usage && (
+        {agentRunState?.status === "completed" && agentRunState.usage && (
           <div className="text-[10px] text-stone-400 flex items-center gap-3">
             <span>✓ 完成</span>
             <span>迭代: {agentRunState.stop_reason}</span>
-            <span>Tokens: {agentRunState.usage.input_tokens} → {agentRunState.usage.output_tokens}</span>
+            <span>
+              Tokens: {agentRunState.usage.input_tokens} →{" "}
+              {agentRunState.usage.output_tokens}
+            </span>
           </div>
         )}
 
-        {agentRunState?.status === 'error' && (
+        {agentRunState?.status === "error" && (
           <div className="text-xs text-red-500">
             ❌ 错误: {agentRunState.error}
           </div>
         )}
 
-        {agentRunState?.status === 'aborted' && (
-          <div className="text-xs text-stone-500">
-            🛑 已终止
-          </div>
+        {agentRunState?.status === "aborted" && (
+          <div className="text-xs text-stone-500">🛑 已终止</div>
         )}
       </div>
     </div>
@@ -87,11 +95,11 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
   const getStatusText = () => {
     switch (toolCall.status) {
       case EventStatus.Pending:
-        return '执行中...';
+        return "执行中...";
       case EventStatus.Completed:
         return `${toolCall.duration_ms}ms`;
       case EventStatus.Failed:
-        return '失败';
+        return "失败";
     }
   };
 
@@ -104,7 +112,9 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
         <div className="flex items-center gap-2">
           {getStatusIcon()}
           <Wrench className="w-3 h-3 text-stone-400" />
-          <span className="font-medium text-stone-700">{toolCall.tool_name}</span>
+          <span className="font-medium text-stone-700">
+            {toolCall.tool_name}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-stone-400">{getStatusText()}</span>
@@ -115,14 +125,14 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
           )}
         </div>
       </button>
-      
+
       {expanded && (
         <div className="border-t border-stone-200/60 px-2 py-1.5 space-y-1">
           <div className="text-[10px]">
             <span className="text-stone-400">输入: </span>
             <code className="text-stone-600 bg-stone-100 px-1 rounded">
-              {typeof toolCall.input === 'string' 
-                ? toolCall.input 
+              {typeof toolCall.input === "string"
+                ? toolCall.input
                 : JSON.stringify(toolCall.input)}
             </code>
           </div>
@@ -130,8 +140,8 @@ function ToolCallItem({ toolCall }: ToolCallItemProps) {
             <div className="text-[10px]">
               <span className="text-stone-400">结果: </span>
               <code className="text-stone-600 bg-stone-100 px-1 rounded break-all">
-                {toolCall.result.length > 200 
-                  ? `${toolCall.result.slice(0, 200)}...` 
+                {toolCall.result.length > 200
+                  ? `${toolCall.result.slice(0, 200)}...`
                   : toolCall.result}
               </code>
             </div>

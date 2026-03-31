@@ -11,6 +11,7 @@
 - 优先使用 zod，而不是 interface
 - 可预期的业务错误不应该叫 internal error, internal error 仅限于不该发生的事发生了（bug、崩溃、意外的异常）
 - 不允许直接 throw Error，必须定义具体错误类并抛出。错误按照就近原则定义到使用它的文件中，error code 按照 `模块:错误简介` 的格式（如 `PROVIDER:MISSING_API_KEY`），继承自 `errors/base.ts` 中的基础错误类（AppError/NotFoundError/ValidationError/InternalError 等）
+- 不允许为了减少工作量，而修改基础规则，e.g.(biome.json)
 
 ## server 规范
 

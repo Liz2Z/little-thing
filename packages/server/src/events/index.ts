@@ -3,5 +3,5 @@
  * 导出所有事件相关类型和功能
  */
 
-export * from './types.js';
-export * from './bus.js';
+export * from "./bus.js";
+export * from "./types.js";

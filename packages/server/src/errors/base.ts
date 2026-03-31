@@ -1,4 +1,8 @@
-export type ErrorTuple = readonly [code: string, status: number, message: string];
+export type ErrorTuple = readonly [
+  code: string,
+  status: number,
+  message: string,
+];
 
 export interface ErrorResponse {
   code: string;
@@ -13,7 +17,7 @@ export class AppError extends Error {
 
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple[2]);
-    this.name = 'AppError';
+    this.name = "AppError";
     this.code = tuple[0];
     this.status = tuple[1];
     this.details = details;
@@ -34,35 +38,35 @@ export class AppError extends Error {
 export class NotFoundError extends AppError {
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple, details);
-    this.name = 'NotFoundError';
+    this.name = "NotFoundError";
   }
 }
 
 export class ValidationError extends AppError {
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple, details);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple, details);
-    this.name = 'UnauthorizedError';
+    this.name = "UnauthorizedError";
   }
 }
 
 export class ForbiddenError extends AppError {
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple, details);
-    this.name = 'ForbiddenError';
+    this.name = "ForbiddenError";
   }
 }
 
 export class InternalError extends AppError {
   constructor(tuple: ErrorTuple, details: Record<string, unknown> = {}) {
     super(tuple, details);
-    this.name = 'InternalError';
+    this.name = "InternalError";
   }
 }
 

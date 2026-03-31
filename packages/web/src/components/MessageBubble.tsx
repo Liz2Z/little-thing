@@ -1,17 +1,16 @@
-import { type Message } from '@/store/sessionStore';
-import { cn } from '@/lib/utils';
-import { Streamdown } from 'streamdown';
-import { code } from '@streamdown/code';
-import { math } from '@streamdown/math';
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { Copy, GitFork, RotateCcw } from "lucide-react";
+import { Streamdown } from "streamdown";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
-import { useSessionStore } from '@/store/sessionStore';
-import { GitFork, RotateCcw, Copy } from 'lucide-react';
+} from "@/components/ui/context-menu";
+import { cn } from "@/lib/utils";
+import { type Message, useSessionStore } from "@/store/sessionStore";
 
 interface MessageBubbleProps {
   message: Message;
@@ -19,8 +18,8 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
-  const isUser = message.role === 'user';
-  const isSystem = message.role === 'system';
+  const isUser = message.role === "user";
+  const isSystem = message.role === "system";
   const forkSession = useSessionStore((state) => state.forkSession);
   const resumeSession = useSessionStore((state) => state.resumeSession);
   const activeSessionId = useSessionStore((state) => state.activeSessionId);
@@ -40,7 +39,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
     try {
       await forkSession(activeSessionId, message.id);
     } catch (error) {
-      console.error('Fork failed:', error);
+      console.error("Fork failed:", error);
     }
   };
 
@@ -49,7 +48,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
     try {
       await resumeSession(activeSessionId, message.id, message.content);
     } catch (error) {
-      console.error('Resume failed:', error);
+      console.error("Resume failed:", error);
     }
   };
 
@@ -60,34 +59,38 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className={cn('flex mb-4', isUser ? 'justify-end' : 'justify-start')}>
+        <div
+          className={cn("flex mb-4", isUser ? "justify-end" : "justify-start")}
+        >
           <div
             className={cn(
-              'max-w-[80%] px-4 py-3 text-sm leading-relaxed',
+              "max-w-[80%] px-4 py-3 text-sm leading-relaxed",
               isUser
-                ? 'bg-primary-100 text-primary-900 rounded-message-user border border-primary-200'
-                : 'bg-card text-foreground rounded-message-assistant border border-stone-200'
+                ? "bg-primary-100 text-primary-900 rounded-message-user border border-primary-200"
+                : "bg-card text-foreground rounded-message-assistant border border-stone-200",
             )}
           >
             {isUser ? (
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {message.content}
+              </p>
             ) : (
               <Streamdown
                 plugins={{ code, math }}
-                isAnimating={isStreaming && message.role === 'assistant'}
+                isAnimating={isStreaming && message.role === "assistant"}
               >
                 {message.content}
               </Streamdown>
             )}
             <span
               className={cn(
-                'text-[10px] mt-2 block tracking-wide',
-                isUser ? 'text-primary-700/60' : 'text-stone-400'
+                "text-[10px] mt-2 block tracking-wide",
+                isUser ? "text-primary-700/60" : "text-stone-400",
               )}
             >
-              {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
-                hour: '2-digit',
-                minute: '2-digit',
+              {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             </span>
           </div>

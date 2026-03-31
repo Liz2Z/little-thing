@@ -1,4 +1,4 @@
-import { CredentialsError } from './errors';
+import { CredentialsError } from "./errors";
 
 const ENV_VAR_PATTERN = /\$\{([^}:]+)(?::-([^}]*))?\}/g;
 
@@ -11,26 +11,29 @@ const ENV_VAR_PATTERN = /\$\{([^}:]+)(?::-([^}]*))?\}/g;
  */
 export function expandEnvVar(value: string): string {
   // 先处理转义的 $$
-  const escaped = value.replace(/\$\$/g, '__ESCAPED_DOLLAR__');
+  const escaped = value.replace(/\$\$/g, "__ESCAPED_DOLLAR__");
 
-  const expanded = escaped.replace(ENV_VAR_PATTERN, (_, varName, defaultValue) => {
-    if (process.env[varName] !== undefined) {
-      return process.env[varName]!;
-    }
-    if (defaultValue !== undefined) {
-      return defaultValue;
-    }
-    throw new CredentialsError(`Environment variable not found: ${varName}`);
-  });
+  const expanded = escaped.replace(
+    ENV_VAR_PATTERN,
+    (_, varName, defaultValue) => {
+      if (process.env[varName] !== undefined) {
+        return process.env[varName]!;
+      }
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new CredentialsError(`Environment variable not found: ${varName}`);
+    },
+  );
 
-  return expanded.replace(/__ESCAPED_DOLLAR__/g, '$');
+  return expanded.replace(/__ESCAPED_DOLLAR__/g, "$");
 }
 
 /**
  * 递归展开对象中的所有字符串字段中的环境变量
  */
 export function expandEnvVarsInObject<T>(obj: T): T {
-  if (typeof obj === 'string') {
+  if (typeof obj === "string") {
     return expandEnvVar(obj) as unknown as T;
   }
 
@@ -38,7 +41,7 @@ export function expandEnvVarsInObject<T>(obj: T): T {
     return obj.map((item) => expandEnvVarsInObject(item)) as unknown as T;
   }
 
-  if (obj !== null && typeof obj === 'object') {
+  if (obj !== null && typeof obj === "object") {
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = expandEnvVarsInObject(value);

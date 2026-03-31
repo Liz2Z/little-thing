@@ -1,8 +1,8 @@
-import { useSessionStore } from '@/store/sessionStore';
-import { SessionItem } from './SessionItem';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, MessageCircle } from 'lucide-react';
+import { MessageCircle, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSessionStore } from "@/store/sessionStore";
+import { SessionItem } from "./SessionItem";
 
 interface SessionListProps {
   onCreateSession: () => void;
@@ -10,7 +10,8 @@ interface SessionListProps {
 }
 
 export function SessionList({ onCreateSession, onClose }: SessionListProps) {
-  const { sessions, activeSessionId, deleteSession, isLoading } = useSessionStore();
+  const { sessions, activeSessionId, deleteSession, isLoading } =
+    useSessionStore();
 
   return (
     <div className="h-full bg-card rounded-xl border border-stone-200/60 flex flex-col overflow-hidden">

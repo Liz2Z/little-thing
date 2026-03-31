@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const DEFAULT_MAX_LINES = 2000;
 export const DEFAULT_MAX_BYTES = 50 * 1024;
@@ -7,7 +7,7 @@ export const GREP_MAX_LINE_LENGTH = 500;
 export const TruncationResultSchema = z.object({
   content: z.string(),
   truncated: z.boolean(),
-  truncatedBy: z.enum(['lines', 'bytes']).nullable(),
+  truncatedBy: z.enum(["lines", "bytes"]).nullable(),
   totalLines: z.number(),
   totalBytes: z.number(),
   outputLines: z.number(),
@@ -35,12 +35,15 @@ export function formatSize(bytes: number): string {
   }
 }
 
-export function truncateHead(content: string, options: TruncationOptions = {}): TruncationResult {
+export function truncateHead(
+  content: string,
+  options: TruncationOptions = {},
+): TruncationResult {
   const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
 
-  const totalBytes = Buffer.byteLength(content, 'utf-8');
-  const lines = content.split('\n');
+  const totalBytes = Buffer.byteLength(content, "utf-8");
+  const lines = content.split("\n");
   const totalLines = lines.length;
 
   if (totalLines <= maxLines && totalBytes <= maxBytes) {
@@ -59,12 +62,12 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
     };
   }
 
-  const firstLineBytes = Buffer.byteLength(lines[0], 'utf-8');
+  const firstLineBytes = Buffer.byteLength(lines[0], "utf-8");
   if (firstLineBytes > maxBytes) {
     return {
-      content: '',
+      content: "",
       truncated: true,
-      truncatedBy: 'bytes',
+      truncatedBy: "bytes",
       totalLines,
       totalBytes,
       outputLines: 0,
@@ -78,14 +81,14 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
 
   const outputLinesArr: string[] = [];
   let outputBytesCount = 0;
-  let truncatedBy: 'lines' | 'bytes' = 'lines';
+  let truncatedBy: "lines" | "bytes" = "lines";
 
   for (let i = 0; i < lines.length && i < maxLines; i++) {
     const line = lines[i];
-    const lineBytes = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
+    const lineBytes = Buffer.byteLength(line, "utf-8") + (i > 0 ? 1 : 0);
 
     if (outputBytesCount + lineBytes > maxBytes) {
-      truncatedBy = 'bytes';
+      truncatedBy = "bytes";
       break;
     }
 
@@ -94,11 +97,11 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
   }
 
   if (outputLinesArr.length >= maxLines && outputBytesCount <= maxBytes) {
-    truncatedBy = 'lines';
+    truncatedBy = "lines";
   }
 
-  const outputContent = outputLinesArr.join('\n');
-  const finalOutputBytes = Buffer.byteLength(outputContent, 'utf-8');
+  const outputContent = outputLinesArr.join("\n");
+  const finalOutputBytes = Buffer.byteLength(outputContent, "utf-8");
 
   return {
     content: outputContent,
@@ -115,12 +118,15 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
   };
 }
 
-export function truncateTail(content: string, options: TruncationOptions = {}): TruncationResult {
+export function truncateTail(
+  content: string,
+  options: TruncationOptions = {},
+): TruncationResult {
   const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
 
-  const totalBytes = Buffer.byteLength(content, 'utf-8');
-  const lines = content.split('\n');
+  const totalBytes = Buffer.byteLength(content, "utf-8");
+  const lines = content.split("\n");
   const totalLines = lines.length;
 
   if (totalLines <= maxLines && totalBytes <= maxBytes) {
@@ -141,19 +147,24 @@ export function truncateTail(content: string, options: TruncationOptions = {}): 
 
   const outputLinesArr: string[] = [];
   let outputBytesCount = 0;
-  let truncatedBy: 'lines' | 'bytes' = 'lines';
+  let truncatedBy: "lines" | "bytes" = "lines";
   let lastLinePartial = false;
 
-  for (let i = lines.length - 1; i >= 0 && outputLinesArr.length < maxLines; i--) {
+  for (
+    let i = lines.length - 1;
+    i >= 0 && outputLinesArr.length < maxLines;
+    i--
+  ) {
     const line = lines[i];
-    const lineBytes = Buffer.byteLength(line, 'utf-8') + (outputLinesArr.length > 0 ? 1 : 0);
+    const lineBytes =
+      Buffer.byteLength(line, "utf-8") + (outputLinesArr.length > 0 ? 1 : 0);
 
     if (outputBytesCount + lineBytes > maxBytes) {
-      truncatedBy = 'bytes';
+      truncatedBy = "bytes";
       if (outputLinesArr.length === 0) {
         const truncatedLine = truncateStringToBytesFromEnd(line, maxBytes);
         outputLinesArr.unshift(truncatedLine);
-        outputBytesCount = Buffer.byteLength(truncatedLine, 'utf-8');
+        outputBytesCount = Buffer.byteLength(truncatedLine, "utf-8");
         lastLinePartial = true;
       }
       break;
@@ -164,11 +175,11 @@ export function truncateTail(content: string, options: TruncationOptions = {}): 
   }
 
   if (outputLinesArr.length >= maxLines && outputBytesCount <= maxBytes) {
-    truncatedBy = 'lines';
+    truncatedBy = "lines";
   }
 
-  const outputContent = outputLinesArr.join('\n');
-  const finalOutputBytes = Buffer.byteLength(outputContent, 'utf-8');
+  const outputContent = outputLinesArr.join("\n");
+  const finalOutputBytes = Buffer.byteLength(outputContent, "utf-8");
 
   return {
     content: outputContent,
@@ -186,7 +197,7 @@ export function truncateTail(content: string, options: TruncationOptions = {}): 
 }
 
 function truncateStringToBytesFromEnd(str: string, maxBytes: number): string {
-  const buf = Buffer.from(str, 'utf-8');
+  const buf = Buffer.from(str, "utf-8");
   if (buf.length <= maxBytes) {
     return str;
   }
@@ -197,7 +208,7 @@ function truncateStringToBytesFromEnd(str: string, maxBytes: number): string {
     start++;
   }
 
-  return buf.slice(start).toString('utf-8');
+  return buf.slice(start).toString("utf-8");
 }
 
 export function truncateLine(
@@ -207,5 +218,8 @@ export function truncateLine(
   if (line.length <= maxChars) {
     return { text: line, wasTruncated: false };
   }
-  return { text: `${line.slice(0, maxChars)}... [truncated]`, wasTruncated: true };
+  return {
+    text: `${line.slice(0, maxChars)}... [truncated]`,
+    wasTruncated: true,
+  };
 }

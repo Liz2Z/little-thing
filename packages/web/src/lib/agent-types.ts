@@ -4,39 +4,39 @@
  */
 
 export enum EventStatus {
-  Pending = 'pending',
-  Completed = 'completed',
-  Failed = 'failed',
+  Pending = "pending",
+  Completed = "completed",
+  Failed = "failed",
 }
 
 export enum AgentStopReason {
-  EndTurn = 'end_turn',
-  ToolUse = 'tool_use',
-  MaxTokens = 'max_tokens',
-  StopSequence = 'stop_sequence',
-  MaxIterations = 'max_iterations',
-  UserAbort = 'user_abort',
-  Error = 'error',
-  Timeout = 'timeout',
+  EndTurn = "end_turn",
+  ToolUse = "tool_use",
+  MaxTokens = "max_tokens",
+  StopSequence = "stop_sequence",
+  MaxIterations = "max_iterations",
+  UserAbort = "user_abort",
+  Error = "error",
+  Timeout = "timeout",
 }
 
 export enum AgentErrorType {
-  LlmError = 'llm_error',
-  ToolError = 'tool_error',
-  Timeout = 'timeout',
-  MaxIterations = 'max_iterations',
-  UserAbort = 'user_abort',
-  Unknown = 'unknown',
+  LlmError = "llm_error",
+  ToolError = "tool_error",
+  Timeout = "timeout",
+  MaxIterations = "max_iterations",
+  UserAbort = "user_abort",
+  Unknown = "unknown",
 }
 
 export enum AgentEventType {
-  Start = 'agent_start',
-  Thinking = 'agent_thinking',
-  Content = 'agent_content',
-  ToolUse = 'tool_use',
-  Complete = 'agent_complete',
-  Error = 'agent_error',
-  Abort = 'agent_abort',
+  Start = "agent_start",
+  Thinking = "agent_thinking",
+  Content = "agent_content",
+  ToolUse = "tool_use",
+  Complete = "agent_complete",
+  Error = "agent_error",
+  Abort = "agent_abort",
 }
 
 export interface AgentEventBase {
@@ -116,7 +116,7 @@ export type AgentEvent =
 
 export interface AgentRunState {
   run_id: string;
-  status: 'running' | 'completed' | 'error' | 'aborted';
+  status: "running" | "completed" | "error" | "aborted";
   thinking?: string;
   content: string;
   toolCalls: Map<string, ToolUseEvent>;

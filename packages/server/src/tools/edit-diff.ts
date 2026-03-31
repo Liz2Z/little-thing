@@ -1,39 +1,42 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const BOM = '\uFEFF';
+const BOM = "\uFEFF";
 
 export function stripBom(content: string): { bom: string; text: string } {
   if (content.startsWith(BOM)) {
     return { bom: BOM, text: content.slice(1) };
   }
-  return { bom: '', text: content };
+  return { bom: "", text: content };
 }
 
-export function detectLineEnding(content: string): '\r\n' | '\n' {
-  const crlfIndex = content.indexOf('\r\n');
+export function detectLineEnding(content: string): "\r\n" | "\n" {
+  const crlfIndex = content.indexOf("\r\n");
   if (crlfIndex !== -1) {
-    return '\r\n';
+    return "\r\n";
   }
-  return '\n';
+  return "\n";
 }
 
 export function normalizeToLF(content: string): string {
-  return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-export function restoreLineEndings(content: string, lineEnding: '\r\n' | '\n'): string {
-  if (lineEnding === '\r\n') {
-    return content.replace(/\n/g, '\r\n');
+export function restoreLineEndings(
+  content: string,
+  lineEnding: "\r\n" | "\n",
+): string {
+  if (lineEnding === "\r\n") {
+    return content.replace(/\n/g, "\r\n");
   }
   return content;
 }
 
 export function normalizeForFuzzyMatch(content: string): string {
   return content
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n+/g, '\n')
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n+/g, "\n")
     .trim();
 }
 
@@ -45,7 +48,10 @@ export const FuzzyMatchResultSchema = z.object({
 });
 export type FuzzyMatchResult = z.infer<typeof FuzzyMatchResultSchema>;
 
-export function fuzzyFindText(content: string, searchText: string): FuzzyMatchResult {
+export function fuzzyFindText(
+  content: string,
+  searchText: string,
+): FuzzyMatchResult {
   const exactIndex = content.indexOf(searchText);
   if (exactIndex !== -1) {
     return {
@@ -69,14 +75,19 @@ export function fuzzyFindText(content: string, searchText: string): FuzzyMatchRe
     };
   }
 
-  let charCount = 0;
+  let _charCount = 0;
   let normalizedCharCount = 0;
   let startIndex = -1;
   let endIndex = -1;
 
-  for (let i = 0; i < content.length && normalizedCharCount <= fuzzyIndex + normalizedSearch.length; i++) {
+  for (
+    let i = 0;
+    i < content.length &&
+    normalizedCharCount <= fuzzyIndex + normalizedSearch.length;
+    i++
+  ) {
     const char = content[i];
-    const normalizedChar = char === '\r' ? '' : char === '\t' ? ' ' : char;
+    const normalizedChar = char === "\r" ? "" : char === "\t" ? " " : char;
 
     if (normalizedCharCount === fuzzyIndex && startIndex === -1) {
       startIndex = i;
@@ -85,9 +96,12 @@ export function fuzzyFindText(content: string, searchText: string): FuzzyMatchRe
     if (normalizedChar) {
       normalizedCharCount++;
     }
-    charCount++;
+    _charCount++;
 
-    if (normalizedCharCount === fuzzyIndex + normalizedSearch.length && endIndex === -1) {
+    if (
+      normalizedCharCount === fuzzyIndex + normalizedSearch.length &&
+      endIndex === -1
+    ) {
       endIndex = i + 1;
     }
   }
@@ -115,9 +129,12 @@ export const DiffResultSchema = z.object({
 });
 export type DiffResult = z.infer<typeof DiffResultSchema>;
 
-export function generateDiffString(oldContent: string, newContent: string): DiffResult {
-  const oldLines = oldContent.split('\n');
-  const newLines = newContent.split('\n');
+export function generateDiffString(
+  oldContent: string,
+  newContent: string,
+): DiffResult {
+  const oldLines = oldContent.split("\n");
+  const newLines = newContent.split("\n");
 
   const diff: string[] = [];
   let firstChangedLine: number | undefined;
@@ -142,7 +159,7 @@ export function generateDiffString(oldContent: string, newContent: string): Diff
   }
 
   return {
-    diff: diff.join('\n'),
+    diff: diff.join("\n"),
     firstChangedLine,
   };
 }

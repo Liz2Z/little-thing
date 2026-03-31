@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { describeRoute, resolver } from "hono-openapi";
 import { streamSSE } from "hono/streaming";
+import { describeRoute, resolver } from "hono-openapi";
 import { z } from "zod";
 import { eventBus } from "../events/bus.js";
 import type { Event } from "../events/types.js";
@@ -51,7 +51,9 @@ app.get(
             schema: resolver(
               z.object({
                 model: z.string().meta({ description: "当前使用的模型" }),
-                provider: z.string().meta({ description: "当前使用的 Provider" }),
+                provider: z
+                  .string()
+                  .meta({ description: "当前使用的 Provider" }),
               }),
             ),
           },

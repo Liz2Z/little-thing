@@ -1,9 +1,7 @@
 {
   "zhipuai-coding-plan": {
     "id": "zhipuai-coding-plan",
-    "env": [
-      "ZHIPU_API_KEY"
-    ],
+    "env": ["ZHIPU_API_KEY"],
     "npm": "@ai-sdk/openai-compatible",
     "api": "https://open.bigmodel.cn/api/coding/paas/v4",
     "name": "Zhipu AI Coding Plan",
@@ -21,14 +19,8 @@
         "release_date": "2025-12-08",
         "last_updated": "2025-12-08",
         "modalities": {
-          "input": [
-            "text",
-            "image",
-            "video"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text", "image", "video"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -52,14 +44,8 @@
         "release_date": "2025-12-08",
         "last_updated": "2025-12-08",
         "modalities": {
-          "input": [
-            "text",
-            "image",
-            "video"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text", "image", "video"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -83,14 +69,8 @@
         "release_date": "2025-08-11",
         "last_updated": "2025-08-11",
         "modalities": {
-          "input": [
-            "text",
-            "image",
-            "video"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text", "image", "video"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -117,12 +97,8 @@
         "release_date": "2026-03-16",
         "last_updated": "2026-03-16",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": false,
         "cost": {
@@ -151,12 +127,8 @@
         "release_date": "2025-12-22",
         "last_updated": "2025-12-22",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -182,12 +154,8 @@
         "release_date": "2025-09-30",
         "last_updated": "2025-09-30",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -213,12 +181,8 @@
         "release_date": "2026-01-19",
         "last_updated": "2026-01-19",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -244,12 +208,8 @@
         "release_date": "2025-07-28",
         "last_updated": "2025-07-28",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -275,12 +235,8 @@
         "release_date": "2025-07-28",
         "last_updated": "2025-07-28",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -306,12 +262,8 @@
         "release_date": "2025-07-28",
         "last_updated": "2025-07-28",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -337,12 +289,8 @@
         "release_date": "2026-01-19",
         "last_updated": "2026-01-19",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {
@@ -370,12 +318,8 @@
         "release_date": "2026-02-11",
         "last_updated": "2026-02-11",
         "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
+          "input": ["text"],
+          "output": ["text"]
         },
         "open_weights": true,
         "cost": {

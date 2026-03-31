@@ -1,27 +1,27 @@
 export class ConfigError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ConfigError';
+    this.name = "ConfigError";
   }
 }
 
 export class ConfigNotLoadedError extends ConfigError {
   constructor(message: string) {
     super(message);
-    this.name = 'ConfigNotLoadedError';
+    this.name = "ConfigNotLoadedError";
   }
 }
 
 export class ValidationError extends ConfigError {
   constructor(message: string) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
   }
 }
 
 export class CredentialsError extends ConfigError {
   constructor(message: string) {
     super(message);
-    this.name = 'CredentialsError';
+    this.name = "CredentialsError";
   }
 }

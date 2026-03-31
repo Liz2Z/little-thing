@@ -3,7 +3,7 @@
  * 基于发布-订阅模式的事件总线，支持类型安全的事件订阅和发布
  */
 
-import { EventType, type Event, type EventMap, type TypedEvent } from './types.js';
+import type { Event, EventMap, EventType, TypedEvent } from "./types.js";
 
 type EventCallback<T extends Event> = (event: T) => void;
 type AllEventCallback = (event: Event) => void;
@@ -14,7 +14,7 @@ export class EventBus {
 
   subscribe<K extends EventType>(
     eventType: K,
-    callback: EventCallback<TypedEvent<K>>
+    callback: EventCallback<TypedEvent<K>>,
   ): () => void {
     if (!this.subscribers.has(eventType)) {
       this.subscribers.set(eventType, new Set());
@@ -30,7 +30,7 @@ export class EventBus {
 
   unsubscribe<K extends EventType>(
     eventType: K,
-    callback: EventCallback<TypedEvent<K>>
+    callback: EventCallback<TypedEvent<K>>,
   ): void {
     const callbacks = this.subscribers.get(eventType);
     if (callbacks) {
@@ -84,7 +84,7 @@ export const eventBus = new EventBus();
 export function createEvent<K extends EventType>(
   type: K,
   payload: EventMap[K],
-  sessionId?: string
+  sessionId?: string,
 ): TypedEvent<K> {
   return {
     type,

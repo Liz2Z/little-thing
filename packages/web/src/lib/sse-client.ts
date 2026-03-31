@@ -3,9 +3,14 @@
  * 用于接收服务器推送的实时事件
  */
 
-import { EventType, type Event, type EventMap, type TypedEvent } from './event-types.js';
+import {
+  type Event,
+  type EventMap,
+  EventType,
+  type TypedEvent,
+} from "./event-types.js";
 
-export type { EventType, Event, EventMap, TypedEvent };
+export type { Event, EventMap, EventType, TypedEvent };
 
 export interface SSEClientOptions {
   baseUrl?: string;
@@ -29,7 +34,7 @@ export class SSEClient {
   private shouldReconnect = true;
 
   constructor(options: SSEClientOptions = {}) {
-    this.baseUrl = options.baseUrl || 'http://localhost:3000';
+    this.baseUrl = options.baseUrl || "http://localhost:3000";
     this.sessionId = options.sessionId;
     this.reconnectInterval = options.reconnectInterval || 3000;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 10;
@@ -54,34 +59,38 @@ export class SSEClient {
       this.eventSource = es;
 
       es.onopen = () => {
-        console.log('SSE 连接已建立');
+        console.log("SSE 连接已建立");
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         resolve();
       };
 
       es.onerror = () => {
-        console.error('SSE 连接错误');
+        console.error("SSE 连接错误");
         this.isConnecting = false;
-        
-        if (this.shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+
+        if (
+          this.shouldReconnect &&
+          this.reconnectAttempts < this.maxReconnectAttempts
+        ) {
           this.reconnectAttempts++;
-          console.log(`尝试重新连接 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+          console.log(
+            `尝试重新连接 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+          );
           setTimeout(() => {
             this.disconnect();
             this.connect();
           }, this.reconnectInterval);
         } else {
-          reject(new Error('SSE 连接失败'));
+          reject(new Error("SSE 连接失败"));
         }
       };
 
-      es.addEventListener('connected', ((event: MessageEvent) => {
-        console.log('SSE 已连接:', event.data);
+      es.addEventListener("connected", ((event: MessageEvent) => {
+        console.log("SSE 已连接:", event.data);
       }) as EventListener);
 
-      es.addEventListener('heartbeat', (() => {
-      }) as EventListener);
+      es.addEventListener("heartbeat", (() => {}) as EventListener);
 
       for (const eventType of Object.values(EventType)) {
         es.addEventListener(eventType, ((event: MessageEvent) => {
@@ -89,7 +98,7 @@ export class SSEClient {
             const data = JSON.parse(event.data) as TypedEvent;
             this.dispatchEvent(data);
           } catch (error) {
-            console.error('解析事件数据失败:', error);
+            console.error("解析事件数据失败:", error);
           }
         }) as EventListener);
       }
@@ -102,17 +111,17 @@ export class SSEClient {
       this.eventSource.close();
       this.eventSource = null;
     }
-    console.log('SSE 连接已断开');
+    console.log("SSE 连接已断开");
   }
 
   subscribe<K extends keyof EventMap>(
     eventType: K,
-    callback: (event: TypedEvent<K>) => void
+    callback: (event: TypedEvent<K>) => void,
   ): () => void {
     if (!this.subscribers.has(eventType)) {
       this.subscribers.set(eventType, new Set());
     }
-    
+
     const callbacks = this.subscribers.get(eventType)!;
     callbacks.add(callback as EventCallback);
 
@@ -138,7 +147,7 @@ export class SSEClient {
         try {
           callback(event);
         } catch (error) {
-          console.error('事件处理错误:', error);
+          console.error("事件处理错误:", error);
         }
       });
     }
@@ -147,20 +156,21 @@ export class SSEClient {
       try {
         callback(event);
       } catch (error) {
-        console.error('全局事件处理错误:', error);
+        console.error("全局事件处理错误:", error);
       }
     });
   }
 
-  getConnectionStatus(): 'connected' | 'connecting' | 'disconnected' {
+  getConnectionStatus(): "connected" | "connecting" | "disconnected" {
     if (this.eventSource?.readyState === 1) {
-      return 'connected';
+      return "connected";
     }
     if (this.isConnecting) {
-      return 'connecting';
+      return "connecting";
     }
-    return 'disconnected';
+    return "disconnected";
   }
 }
 
-export const createSSEClient = (options?: SSEClientOptions) => new SSEClient(options);
+export const createSSEClient = (options?: SSEClientOptions) =>
+  new SSEClient(options);

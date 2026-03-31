@@ -1,14 +1,14 @@
-import { cors } from "hono/cors";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { errorHandler, InternalError } from "./errors";
+
+import { providerRoutes, sessionRoutes, systemRoutes } from "./routes";
 // must import before other modules
 import { settings } from "./settings";
 
-import { sessionRoutes, systemRoutes, providerRoutes } from "./routes";
-import { errorHandler, InternalError } from "./errors";
-
 class ConfigNotLoadedError extends InternalError {
   constructor() {
-    super(['CONFIG:NOT_LOADED', 500, '服务器配置未加载'] as const);
+    super(["CONFIG:NOT_LOADED", 500, "服务器配置未加载"] as const);
   }
 }
 

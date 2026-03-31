@@ -17,7 +17,7 @@ app.get(
         name: "providerId",
         in: "path",
         required: true,
-        schema: resolver(z.string().meta({ description: "供应商 ID" })),
+        schema: { type: "string", description: "供应商 ID" },
       },
     ],
     responses: {

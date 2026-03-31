@@ -1,35 +1,35 @@
-import { create } from 'zustand';
 import {
-  sessionsList,
+  type SessionsGetResponse,
+  type SessionsListResponse,
   sessionsCreate,
   sessionsDelete,
-  sessionsGet,
   sessionsFork,
+  sessionsGet,
+  sessionsList,
   sessionsResume,
-  type SessionsListResponse,
-  type SessionsGetResponse,
-} from '@littlething/sdk';
-import { useConfigStore } from './configStore';
+} from "@littlething/sdk";
+import { create } from "zustand";
 import {
-  AgentEventType,
   type AgentEvent,
+  AgentEventType,
   type AgentRunState,
   type ToolUseEvent,
-} from '@/lib/agent-types';
+} from "@/lib/agent-types";
+import { useConfigStore } from "./configStore";
 
-type Session = SessionsListResponse['sessions'][number];
-type Message = SessionsGetResponse['session']['messages'][number];
+type Session = SessionsListResponse["sessions"][number];
+type Message = SessionsGetResponse["session"]["messages"][number];
 
 function generateTempId(): string {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function parseSSEEvent(line: string): { event: string; data: string } | null {
-  if (line.startsWith('event:')) {
-    return { event: line.slice(6).trim(), data: '' };
+  if (line.startsWith("event:")) {
+    return { event: line.slice(6).trim(), data: "" };
   }
-  if (line.startsWith('data:')) {
-    return { event: '', data: line.slice(5).trim() };
+  if (line.startsWith("data:")) {
+    return { event: "", data: line.slice(5).trim() };
   }
   return null;
 }
@@ -58,8 +58,16 @@ interface SessionState {
   removeSession: (id: string) => void;
   updateSession: (id: string, updates: Partial<Session>) => void;
   setInputText: (text: string) => void;
-  forkSession: (sessionId: string, messageId: string, name?: string) => Promise<Session>;
-  resumeSession: (sessionId: string, messageId: string, messageContent: string) => Promise<void>;
+  forkSession: (
+    sessionId: string,
+    messageId: string,
+    name?: string,
+  ) => Promise<Session>;
+  resumeSession: (
+    sessionId: string,
+    messageId: string,
+    messageContent: string,
+  ) => Promise<void>;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -69,7 +77,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isLoading: false,
   error: null,
   initialized: false,
-  inputText: '',
+  inputText: "",
   agentRunState: null,
   isAgentRunning: false,
 
@@ -86,13 +94,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         const createResponse = await sessionsCreate({
           baseUrl,
           body: {
-            name: `会话 ${new Date().toLocaleString('zh-CN', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}`
-          }
+            name: `会话 ${new Date().toLocaleString("zh-CN", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`,
+          },
         });
         const newSession = createResponse.data?.session;
         if (newSession) {
@@ -113,7 +121,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to initialize',
+        error: error instanceof Error ? error.message : "Failed to initialize",
         isLoading: false,
       });
     }
@@ -128,7 +136,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({ sessions, isLoading: false });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch sessions',
+        error:
+          error instanceof Error ? error.message : "Failed to fetch sessions",
         isLoading: false,
       });
     }
@@ -140,11 +149,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const baseUrl = useConfigStore.getState().apiUrl;
       const response = await sessionsCreate({
         baseUrl,
-        body: { name }
+        body: { name },
       });
       const session = response.data?.session;
       if (!session) {
-        throw new Error('Failed to create session: no session returned');
+        throw new Error("Failed to create session: no session returned");
       }
       set((state) => ({
         sessions: [...state.sessions, session],
@@ -153,7 +162,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return session;
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to create session',
+        error:
+          error instanceof Error ? error.message : "Failed to create session",
         isLoading: false,
       });
       throw error;
@@ -166,16 +176,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const baseUrl = useConfigStore.getState().apiUrl;
       await sessionsDelete({
         baseUrl,
-        path: { id }
+        path: { id },
       });
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== id),
-        activeSessionId: state.activeSessionId === id ? null : state.activeSessionId,
+        activeSessionId:
+          state.activeSessionId === id ? null : state.activeSessionId,
         isLoading: false,
       }));
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to delete session',
+        error:
+          error instanceof Error ? error.message : "Failed to delete session",
         isLoading: false,
       });
     }
@@ -196,7 +208,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const baseUrl = useConfigStore.getState().apiUrl;
       const response = await sessionsGet({
         baseUrl,
-        path: { id }
+        path: { id },
       });
       const session = response.data?.session;
       set({
@@ -205,7 +217,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch messages',
+        error:
+          error instanceof Error ? error.message : "Failed to fetch messages",
         isLoading: false,
       });
     }
@@ -214,12 +227,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   sendMessage: async (content: string) => {
     const { activeSessionId } = get();
     if (!activeSessionId) {
-      throw new Error('No active session');
+      throw new Error("No active session");
     }
 
     const userMessage: Message = {
       id: generateTempId(),
-      role: 'user',
+      role: "user",
       content,
       timestamp: new Date().toISOString(),
     };
@@ -232,26 +245,29 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
 
-      const response = await fetch(`${apiUrl}/sessions/${activeSessionId}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: content,
-        }),
-      });
+      const response = await fetch(
+        `${apiUrl}/sessions/${activeSessionId}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: content,
+          }),
+        },
+      );
 
       if (!response.ok) {
         throw new Error(`Chat failed: ${response.status}`);
       }
 
       if (!response.body) {
-        throw new Error('Response body is null');
+        throw new Error("Response body is null");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let currentEvent = '';
+      let buffer = "";
+      let currentEvent = "";
       let currentRunState: AgentRunState | null = null;
 
       try {
@@ -260,8 +276,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
             const trimmed = line.trim();
@@ -274,11 +290,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               } else if (parsed.data && currentEvent) {
                 try {
                   const event = JSON.parse(parsed.data) as AgentEvent;
-                  currentRunState = handleAgentEvent(event, currentRunState, set, get);
+                  currentRunState = handleAgentEvent(
+                    event,
+                    currentRunState,
+                    set,
+                    get,
+                  );
                 } catch (e) {
-                  console.error('Failed to parse event:', e);
+                  console.error("Failed to parse event:", e);
                 }
-                currentEvent = '';
+                currentEvent = "";
               }
             }
           }
@@ -290,7 +311,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             if (currentRunState!.content) {
               const assistantMessage: Message = {
                 id: generateTempId(),
-                role: 'assistant',
+                role: "assistant",
                 content: currentRunState!.content,
                 timestamp: new Date().toISOString(),
               };
@@ -308,7 +329,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to send message',
+        error:
+          error instanceof Error ? error.message : "Failed to send message",
         isAgentRunning: false,
       });
       throw error;
@@ -322,13 +344,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     try {
       const apiUrl = useConfigStore.getState().apiUrl;
       await fetch(`${apiUrl}/sessions/${activeSessionId}/agent/abort`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ run_id: agentRunState.run_id }),
       });
       set({ isAgentRunning: false });
     } catch (error) {
-      console.error('Failed to abort agent:', error);
+      console.error("Failed to abort agent:", error);
     }
   },
 
@@ -343,14 +365,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   removeSession: (id: string) => {
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== id),
-      activeSessionId: state.activeSessionId === id ? null : state.activeSessionId,
+      activeSessionId:
+        state.activeSessionId === id ? null : state.activeSessionId,
     }));
   },
 
   updateSession: (id: string, updates: Partial<Session>) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === id ? { ...s, ...updates } : s
+        s.id === id ? { ...s, ...updates } : s,
       ),
     }));
   },
@@ -366,11 +389,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const response = await sessionsFork({
         baseUrl,
         path: { id: sessionId },
-        body: { messageId, name }
+        body: { messageId, name },
       });
       const session = response.data?.session;
       if (!session) {
-        throw new Error('Failed to fork session: no session returned');
+        throw new Error("Failed to fork session: no session returned");
       }
       set((state) => ({
         sessions: [...state.sessions, session],
@@ -381,21 +404,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return session;
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fork session',
+        error:
+          error instanceof Error ? error.message : "Failed to fork session",
         isLoading: false,
       });
       throw error;
     }
   },
 
-  resumeSession: async (sessionId: string, messageId: string, messageContent: string) => {
+  resumeSession: async (
+    sessionId: string,
+    messageId: string,
+    messageContent: string,
+  ) => {
     set({ isLoading: true, error: null });
     try {
       const baseUrl = useConfigStore.getState().apiUrl;
       await sessionsResume({
         baseUrl,
         path: { id: sessionId },
-        body: { messageId }
+        body: { messageId },
       });
       set((state) => {
         const filteredMessages: Message[] = [];
@@ -413,7 +441,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to resume session',
+        error:
+          error instanceof Error ? error.message : "Failed to resume session",
         isLoading: false,
       });
       throw error;
@@ -425,14 +454,14 @@ function handleAgentEvent(
   event: AgentEvent,
   currentRunState: AgentRunState | null,
   set: (partial: Partial<SessionState>) => void,
-  _get: () => SessionState
+  _get: () => SessionState,
 ): AgentRunState {
   switch (event.type) {
     case AgentEventType.Start: {
       const newState: AgentRunState = {
         run_id: event.run_id,
-        status: 'running',
-        content: '',
+        status: "running",
+        content: "",
         toolCalls: new Map(),
         startTime: Date.now(),
       };
@@ -480,7 +509,7 @@ function handleAgentEvent(
       if (!currentRunState) return currentRunState!;
       const updated: AgentRunState = {
         ...currentRunState,
-        status: 'completed',
+        status: "completed",
         content: event.final_content,
         endTime: Date.now(),
         stop_reason: event.stop_reason,
@@ -494,7 +523,7 @@ function handleAgentEvent(
       if (!currentRunState) return currentRunState!;
       const updated: AgentRunState = {
         ...currentRunState,
-        status: 'error',
+        status: "error",
         endTime: Date.now(),
         error: event.error,
       };
@@ -506,7 +535,7 @@ function handleAgentEvent(
       if (!currentRunState) return currentRunState!;
       const updated: AgentRunState = {
         ...currentRunState,
-        status: 'aborted',
+        status: "aborted",
         endTime: Date.now(),
       };
       set({ agentRunState: updated, isAgentRunning: false });
@@ -518,4 +547,4 @@ function handleAgentEvent(
   }
 }
 
-export type { Session, Message };
+export type { Message, Session };

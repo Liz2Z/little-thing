@@ -1,14 +1,15 @@
-import type { SessionsGetResponse } from '@littlething/sdk';
-import { MessageBubble } from './MessageBubble';
-import { AgentStatus } from './AgentStatus';
-import { Streamdown } from 'streamdown';
-import { code } from '@streamdown/code';
-import { math } from '@streamdown/math';
-import type { AgentRunState } from '@/lib/agent-types';
+import type { SessionsGetResponse } from "@littlething/sdk";
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { Streamdown } from "streamdown";
+import type { AgentRunState } from "@/lib/agent-types";
+import { AgentStatus } from "./AgentStatus";
+import { MessageBubble } from "./MessageBubble";
 
-type Message = SessionsGetResponse['session']['messages'][number];
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useEffect, useRef } from 'react';
+type Message = SessionsGetResponse["session"]["messages"][number];
+
+import { useEffect, useRef } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MessageListProps {
   messages: Message[];
@@ -16,15 +17,19 @@ interface MessageListProps {
   agentRunState?: AgentRunState | null;
 }
 
-export function MessageList({ messages, isStreaming, agentRunState }: MessageListProps) {
+export function MessageList({
+  messages,
+  isStreaming,
+  agentRunState,
+}: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, agentRunState?.content]);
+  }, []);
 
   if (messages.length === 0) {
     return (
@@ -47,7 +52,11 @@ export function MessageList({ messages, isStreaming, agentRunState }: MessageLis
             <MessageBubble
               key={index}
               message={message}
-              isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+              isStreaming={
+                isStreaming &&
+                index === messages.length - 1 &&
+                message.role === "assistant"
+              }
             />
           ))}
 
@@ -55,10 +64,7 @@ export function MessageList({ messages, isStreaming, agentRunState }: MessageLis
           {hasStreamingContent && (
             <div className="flex mb-4 justify-start">
               <div className="max-w-[80%] px-4 py-3 text-sm leading-relaxed bg-card text-foreground rounded-message-assistant border border-stone-200">
-                <Streamdown
-                  plugins={{ code, math }}
-                  isAnimating={true}
-                >
+                <Streamdown plugins={{ code, math }} isAnimating={true}>
                   {agentRunState.content}
                 </Streamdown>
               </div>

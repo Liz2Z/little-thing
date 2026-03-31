@@ -1,48 +1,60 @@
-import { z } from 'zod';
-import { constants } from 'fs';
-import { access as fsAccess, readFile as fsReadFile, writeFile as fsWriteFile } from 'fs/promises';
-import type { ToolDefinition } from './types.js';
+import { constants } from "node:fs";
+import {
+  access as fsAccess,
+  readFile as fsReadFile,
+  writeFile as fsWriteFile,
+} from "node:fs/promises";
+import { z } from "zod";
+import { ValidationError } from "../errors/base.js";
 import {
   detectLineEnding,
-  DiffResultSchema,
   fuzzyFindText,
   generateDiffString,
   normalizeForFuzzyMatch,
   normalizeToLF,
   restoreLineEndings,
   stripBom,
-} from './edit-diff.js';
-import { resolveToCwd } from './path-utils.js';
-import { ValidationError } from '../errors/base.js';
+} from "./edit-diff.js";
+import { resolveToCwd } from "./path-utils.js";
+import type { ToolDefinition } from "./types.js";
 
 class ToolAbortedError extends ValidationError {
   constructor() {
-    super(['TOOL:ABORTED', 200, '操作被中断'] as const);
+    super(["TOOL:ABORTED", 200, "操作被中断"] as const);
   }
 }
 
 class FileNotFoundError extends ValidationError {
   constructor(path: string) {
-    super(['TOOL:FILE_NOT_FOUND', 400, '文件不存在'] as const, { path });
+    super(["TOOL:FILE_NOT_FOUND", 400, "文件不存在"] as const, { path });
   }
 }
 
 class OldTextNotFoundError extends ValidationError {
   constructor(path: string, hint: string) {
-    super(['TOOL:OLD_TEXT_NOT_FOUND', 400, '未找到要替换的文本'] as const, { path, hint });
+    super(["TOOL:OLD_TEXT_NOT_FOUND", 400, "未找到要替换的文本"] as const, {
+      path,
+      hint,
+    });
   }
 }
 
 class OldTextMultipleError extends ValidationError {
   constructor(path: string, occurrences: number, hint: string) {
-    super(['TOOL:OLD_TEXT_MULTIPLE', 400, '要替换的文本出现多次'] as const, { path, occurrences, hint });
+    super(["TOOL:OLD_TEXT_MULTIPLE", 400, "要替换的文本出现多次"] as const, {
+      path,
+      occurrences,
+      hint,
+    });
   }
 }
 
 const editSchema = z.object({
-  path: z.string().describe('Path to the file to edit (relative or absolute)'),
-  oldText: z.string().describe('Exact text to find and replace (must match exactly)'),
-  newText: z.string().describe('New text to replace the old text with'),
+  path: z.string().describe("Path to the file to edit (relative or absolute)"),
+  oldText: z
+    .string()
+    .describe("Exact text to find and replace (must match exactly)"),
+  newText: z.string().describe("New text to replace the old text with"),
 });
 
 export type EditToolInput = z.infer<typeof editSchema>;
@@ -62,7 +74,7 @@ export interface EditOperations {
 
 const defaultEditOperations: EditOperations = {
   readFile: (path) => fsReadFile(path),
-  writeFile: (path, content) => fsWriteFile(path, content, 'utf-8'),
+  writeFile: (path, content) => fsWriteFile(path, content, "utf-8"),
   access: (path) => fsAccess(path, constants.R_OK | constants.W_OK),
 };
 
@@ -70,24 +82,31 @@ export interface EditToolOptions {
   operations?: EditOperations;
 }
 
-export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition<typeof editSchema, EditToolDetails> {
+export function createEditTool(
+  cwd: string,
+  options?: EditToolOptions,
+): ToolDefinition<typeof editSchema, EditToolDetails> {
   const ops = options?.operations ?? defaultEditOperations;
 
   return {
-    name: 'edit',
-    label: 'edit',
+    name: "edit",
+    label: "edit",
     description:
-      'Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits.',
+      "Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits.",
     parameters: editSchema,
     execute: async (
       _toolCallId: string,
-      { path, oldText, newText }: { path: string; oldText: string; newText: string },
+      {
+        path,
+        oldText,
+        newText,
+      }: { path: string; oldText: string; newText: string },
       signal?: AbortSignal,
     ) => {
       const absolutePath = resolveToCwd(path, cwd);
 
       return new Promise<{
-        content: Array<{ type: 'text'; text: string }>;
+        content: Array<{ type: "text"; text: string }>;
         details: EditToolDetails | undefined;
       }>((resolve, reject) => {
         if (signal?.aborted) {
@@ -103,7 +122,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
         };
 
         if (signal) {
-          signal.addEventListener('abort', onAbort, { once: true });
+          signal.addEventListener("abort", onAbort, { once: true });
         }
 
         (async () => {
@@ -112,7 +131,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
               await ops.access(absolutePath);
             } catch {
               if (signal) {
-                signal.removeEventListener('abort', onAbort);
+                signal.removeEventListener("abort", onAbort);
               }
               reject(new FileNotFoundError(path));
               return;
@@ -123,7 +142,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             }
 
             const buffer = await ops.readFile(absolutePath);
-            const rawContent = buffer.toString('utf-8');
+            const rawContent = buffer.toString("utf-8");
 
             if (aborted) {
               return;
@@ -136,14 +155,20 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             const normalizedOldText = normalizeToLF(oldText);
             const normalizedNewText = normalizeToLF(newText);
 
-            const matchResult = fuzzyFindText(normalizedContent, normalizedOldText);
+            const matchResult = fuzzyFindText(
+              normalizedContent,
+              normalizedOldText,
+            );
 
             if (!matchResult.found) {
               if (signal) {
-                signal.removeEventListener('abort', onAbort);
+                signal.removeEventListener("abort", onAbort);
               }
               reject(
-                new OldTextNotFoundError(path, 'The old text must match exactly including all whitespace and newlines.'),
+                new OldTextNotFoundError(
+                  path,
+                  "The old text must match exactly including all whitespace and newlines.",
+                ),
               );
               return;
             }
@@ -154,10 +179,14 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
             if (occurrences > 1) {
               if (signal) {
-                signal.removeEventListener('abort', onAbort);
+                signal.removeEventListener("abort", onAbort);
               }
               reject(
-                new OldTextMultipleError(path, occurrences, 'Please provide more context to make it unique.'),
+                new OldTextMultipleError(
+                  path,
+                  occurrences,
+                  "Please provide more context to make it unique.",
+                ),
               );
               return;
             }
@@ -170,19 +199,25 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             const newContent =
               baseContent.substring(0, matchResult.index) +
               normalizedNewText +
-              baseContent.substring(matchResult.index + matchResult.matchLength);
+              baseContent.substring(
+                matchResult.index + matchResult.matchLength,
+              );
 
             if (baseContent === newContent) {
               if (signal) {
-                signal.removeEventListener('abort', onAbort);
+                signal.removeEventListener("abort", onAbort);
               }
               reject(
-                new OldTextNotFoundError(path, 'The replacement produced identical content. This might indicate an issue with special characters.'),
+                new OldTextNotFoundError(
+                  path,
+                  "The replacement produced identical content. This might indicate an issue with special characters.",
+                ),
               );
               return;
             }
 
-            const finalContent = bom + restoreLineEndings(newContent, originalEnding);
+            const finalContent =
+              bom + restoreLineEndings(newContent, originalEnding);
             await ops.writeFile(absolutePath, finalContent);
 
             if (aborted) {
@@ -190,22 +225,25 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             }
 
             if (signal) {
-              signal.removeEventListener('abort', onAbort);
+              signal.removeEventListener("abort", onAbort);
             }
 
             const diffResult = generateDiffString(baseContent, newContent);
             resolve({
               content: [
                 {
-                  type: 'text',
+                  type: "text",
                   text: `Successfully replaced text in ${path}.`,
                 },
               ],
-              details: { diff: diffResult.diff, firstChangedLine: diffResult.firstChangedLine },
+              details: {
+                diff: diffResult.diff,
+                firstChangedLine: diffResult.firstChangedLine,
+              },
             });
           } catch (error: any) {
             if (signal) {
-              signal.removeEventListener('abort', onAbort);
+              signal.removeEventListener("abort", onAbort);
             }
 
             if (!aborted) {
