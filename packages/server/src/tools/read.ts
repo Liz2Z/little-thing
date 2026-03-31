@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { access as fsAccess, readFile as fsReadFile } from "node:fs/promises";
 import { z } from "zod";
-import { ValidationError } from "../errors/base.js";
+import { ValidationError } from "../lib/error.js";
 import { resolveReadPath } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,

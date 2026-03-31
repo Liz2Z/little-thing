@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import nodePath from "node:path";
 import { z } from "zod";
-import { ForbiddenError, ValidationError } from "../errors/base.js";
+import { ForbiddenError, ValidationError } from "../lib/error.js";
 import { resolveToCwd } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,

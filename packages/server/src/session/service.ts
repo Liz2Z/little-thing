@@ -1,12 +1,10 @@
-import { Agent } from "../agent/agent.js";
 import type {
   AgentCompleteEvent,
   AgentErrorEvent,
   AgentEvent,
 } from "../agent/events.js";
-import { ValidationError } from "../errors/base.js";
-import { createModel } from "../providers/factory.js";
-import type { ToolExecutor } from "../tools/registry.js";
+import type { AIService } from "../ai/service.js";
+import { ValidationError } from "../lib/error.js";
 import type { Message } from "./message.js";
 import type { Session, SessionMeta } from "./session.schema.js";
 import type { SessionStore } from "./store.js";
@@ -30,13 +28,8 @@ export interface ChatOptions {
 export class SessionService {
   constructor(
     private sessionStore: SessionStore,
-    private toolExecutor: ToolExecutor,
+    private aiService: AIService,
   ) {}
-
-  private createAgent(provider: string, model: string): Agent {
-    const languageModel = createModel(provider, model);
-    return new Agent(languageModel, this.toolExecutor);
-  }
 
   listSessions(): SessionMeta[] {
     return this.sessionStore.listSessions();
@@ -74,7 +67,9 @@ export class SessionService {
     return this.sessionStore.resumeSession(sessionId, messageId);
   }
 
-  abort(runId: string): void {}
+  abort(runId: string): void {
+    this.aiService.abort(runId);
+  }
 
   async *chat(
     sessionId: string,
@@ -105,9 +100,9 @@ export class SessionService {
     }
 
     try {
-      const agent = this.createAgent(provider, model);
-
-      for await (const event of agent.run(message, session.messages, {
+      for await (const event of this.aiService.chat(message, session.messages, {
+        provider,
+        model,
         enabledTools: options?.enabledTools,
       })) {
         yield event;

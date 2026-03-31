@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { xdgCache, xdgConfig, xdgData } from "xdg-basedir";
-import { InternalError } from "../errors/base.js";
+import { InternalError } from "../lib/error.js";
 
 const APP_NAME = "littlething";
 

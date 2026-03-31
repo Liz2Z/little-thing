@@ -1,10 +1,34 @@
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { errorHandler, InternalError } from "./errors";
+import { AppError, InternalError } from "./lib/error";
 
 import { providerRoutes, sessionRoutes, systemRoutes } from "./routes";
 // must import before other modules
 import { settings } from "./settings";
+
+function errorHandler(err: Error, c: Context) {
+  if (err instanceof AppError) {
+    return c.json(
+      err.toJSON(),
+      err.status as 200 | 400 | 401 | 403 | 404 | 408 | 429 | 500,
+    );
+  }
+
+  console.error("Unhandled error:", err);
+
+  const internalError = new InternalError(
+    ["INTERNAL:UNHANDLED", 500, "服务器内部错误"] as const,
+    {
+      ...(process.env.NODE_ENV !== "production" && {
+        stack: err.stack,
+        originalMessage: err.message,
+      }),
+    },
+  );
+
+  return c.json(internalError.toJSON(), 500);
+}
 
 class ConfigNotLoadedError extends InternalError {
   constructor() {

@@ -1,7 +1,7 @@
 import { mkdir as fsMkdir, writeFile as fsWriteFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
-import { ValidationError } from "../errors/base.js";
+import { ValidationError } from "../lib/error.js";
 import { resolveToCwd } from "./path-utils.js";
 import type { ToolDefinition } from "./types.js";
 

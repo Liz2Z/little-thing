@@ -3,7 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { z } from "zod";
-import { InternalError, ValidationError } from "../errors/base.js";
+import { InternalError, ValidationError } from "../lib/error.js";
 import { resolveToCwd } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,

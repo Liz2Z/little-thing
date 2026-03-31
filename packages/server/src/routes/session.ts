@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { z } from "zod";
-import { NotFoundError } from "../errors/base.js";
+import { NotFoundError } from "../lib/error.js";
 import { createSessionService } from "../session/index.js";
 
 class SessionNotFoundError extends NotFoundError {

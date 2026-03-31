@@ -5,7 +5,7 @@ import {
   writeFile as fsWriteFile,
 } from "node:fs/promises";
 import { z } from "zod";
-import { ValidationError } from "../errors/base.js";
+import { ValidationError } from "../lib/error.js";
 import {
   detectLineEnding,
   fuzzyFindText,
