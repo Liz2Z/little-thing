@@ -4,12 +4,9 @@
  * 这些测试使用真实的 Provider API 进行端到端测试。
  * 运行前需要确保 .env.test 中配置了有效的 API Key。
  *
- * 运行方式：bun test e2e/server/providers/provider-api.spec.ts
+ * 运行方式：NODE_ENV=test bun test e2e/server/providers/provider-api.spec.ts
  */
-import { describe, it, expect, beforeAll } from "bun:test";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { describe, it, expect } from "bun:test";
 import {
   createModel,
   listModels,
@@ -17,33 +14,7 @@ import {
 import modelsData from "../../../packages/server/src/providers/models.json";
 import { streamText } from "ai";
 
-// 从 .env.test 加载环境变量
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const envTestPath = join(__dirname, "../../../packages/server/.env.test");
-
-function loadEnvTest() {
-  try {
-    const envContent = readFileSync(envTestPath, "utf-8");
-    for (const line of envContent.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#")) {
-        const [key, ...valueParts] = trimmed.split("=");
-        const value = valueParts.join("=").trim();
-        if (key && value) {
-          process.env[key] = value;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn(`Warning: Could not load .env.test: ${error}`);
-  }
-}
-
 describe("Provider API E2E", () => {
-  beforeAll(() => {
-    loadEnvTest();
-  });
-
   describe("createModel", () => {
     it("should create zhipuai-coding-plan model with API key from env", () => {
       // 确保环境变量已加载

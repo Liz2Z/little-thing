@@ -16,7 +16,9 @@
     "test:coverage": "turbo run test:coverage",
     "test:watch": "turbo run test:watch",
     "test:ci": "turbo run test:ci",
-    "test:e2e": "playwright test",
+    "test:e2e:server": "NODE_ENV=test bun test e2e/server",
+    "test:e2e:web": "playwright test e2e/web",
+    "test:e2e": "bun run test:e2e:server && bun run test:e2e:web",
     "prepare": "husky"
   },
   "devDependencies": {
