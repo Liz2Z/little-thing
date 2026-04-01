@@ -1,7 +1,7 @@
 /**
  * 从 models.dev 拉取模型数据并按白名单过滤
  *
- * 使用方式: bun run packages/server/scripts/fetch-models.ts
+ * 使用方式: bun run packages/thing/scripts/fetch-models.ts
  */
 
 const MODELS_DEV_API = "https://models.dev/api.json";

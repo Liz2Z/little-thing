@@ -13,10 +13,9 @@
   "packageManager": "bun@1.3.9",
   "private": true,
   "scripts": {
-    "dev:server": "bun run --filter @littlething/server --stream --elide-lines=0 dev",
-    "dev:cli": "bun run --filter @littlething/cli dev",
+    "dev:thing": "bun run --filter @littlething/thing dev",
     "dev:web": "bun run --filter @littlething/web dev",
-    "dev": "bun run dev:server & bun run dev:web",
+    "dev": "bun run dev:thing",
     "generate:sdk": "cd packages/sdk && bun run generate",
     "build": "bun run --filter '*' build",
     "test": "turbo run test",

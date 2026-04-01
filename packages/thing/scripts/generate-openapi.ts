@@ -1,7 +1,7 @@
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { app } from '../src/index.js';
+import { createServerApp } from '../src/server/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_FILE = join(__dirname, '../openapi.json');
@@ -9,6 +9,7 @@ const OUTPUT_FILE = join(__dirname, '../openapi.json');
 async function generateOpenAPI() {
   console.log('生成 OpenAPI 规范...');
 
+  const app = createServerApp();
   const { generateSpecs } = await import('hono-openapi');
   const specs = await generateSpecs(app);
 

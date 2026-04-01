@@ -563,64 +563,40 @@ export type SystemConfigResponses = {
 
 export type SystemConfigResponse = SystemConfigResponses[keyof SystemConfigResponses];
 
-export type ProviderModelsListData = {
+export type ProviderModelsListByProviderData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * 供应商 ID
+         */
+        providerId: string;
+    };
     query?: never;
-    url: '/provider/models';
+    url: '/provider/providers/{providerId}/models';
 };
 
-export type ProviderModelsListErrors = {
-    /**
-     * 未授权
-     */
-    401: {
-        /**
-         * 错误信息
-         */
-        error: string;
-    };
-    /**
-     * 服务器错误
-     */
-    500: {
-        /**
-         * 错误信息
-         */
-        error: string;
-    };
-};
-
-export type ProviderModelsListError = ProviderModelsListErrors[keyof ProviderModelsListErrors];
-
-export type ProviderModelsListResponses = {
+export type ProviderModelsListByProviderResponses = {
     /**
      * 可用模型列表
      */
     200: {
-        models: Array<{
+        object: 'list';
+        data: Array<{
             /**
              * 模型 ID
              */
             id: string;
+            object: 'model';
             /**
-             * 模型名称
+             * 创建时间戳
              */
-            name: string;
+            created?: number;
             /**
-             * 显示名称
+             * 所有者
              */
-            displayName?: string;
-            /**
-             * 模型描述
-             */
-            description?: string;
-            /**
-             * 上下文长度
-             */
-            contextLength?: number;
+            owned_by?: string;
         }>;
     };
 };
 
-export type ProviderModelsListResponse = ProviderModelsListResponses[keyof ProviderModelsListResponses];
+export type ProviderModelsListByProviderResponse = ProviderModelsListByProviderResponses[keyof ProviderModelsListByProviderResponses];

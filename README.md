@@ -1,6 +1,6 @@
 # little thing
 
-基于 LLM 的智能助手平台，支持 CLI 和 Web 客户端。
+基于 LLM 的智能助手平台，核心形态是 `thing` CLI（含 TUI 与 `server` 子命令）。
 
 ## 快速开始
 
@@ -18,64 +18,34 @@ export LLM_MODEL="kimi-k2.5"
 bun install
 ```
 
-### 3. 启动服务
+### 3. 启动
 
 ```bash
-# 同时启动 Server 和 Web UI
+# 启动 thing（默认入口，当前为 TUI 占位）
 bun run dev
 
-# 或者分别启动
-bun run dev:server  # HTTP API 服务器 (http://localhost:3000)
-bun run dev:web     # Web UI (http://localhost:5173)
-bun run dev:cli     # 命令行客户端
+# 单独启动 HTTP 服务（给 Web UI / SDK 使用）
+thing server
+
+# 按需启动 Web UI
+bun run dev:web
 ```
 
-访问 http://localhost:5173 使用 Web UI。
+默认服务地址：
+- HTTP API: `http://localhost:3000`
+- OpenAPI: `http://localhost:3000/openapi.json`
+- Web UI: `http://localhost:5173`
 
 ## 项目结构
 
-```
+```text
 packages/
-├── server/    # HTTP API 服务器（LLM、工具、会话管理）
-├── cli/       # 命令行客户端
-└── web/       # Web 用户界面
+├── thing/    # CLI 一等包（TUI + server 子命令 + 核心能力）
+├── web/      # Web 用户界面
+└── sdk/      # 基于 OpenAPI 生成的客户端 SDK
 ```
 
-## Web UI 功能
-
-- 多会话管理
-- 实时流式聊天
-- 响应式设计（支持移动端）
-- 配置管理（API 地址、API Key、模型选择）
-
-## CLI 客户端
-
-### 交互式命令
-
-在聊天中输入：
-- `/new [name]` - 创建新会话
-- `/list` - 列出所有会话
-- `/switch <id>` - 切换到指定会话
-- `/delete <id>` - 删除会话
-- `/rename <name>` - 重命名当前会话
-- `/clear` - 清屏
-- `/quit` - 退出
-
-### 命令行操作
-
-```bash
-# 列出所有会话
-lt sessions list
-
-# 创建新会话
-lt sessions new "代码调试"
-
-# 切换到会话
-lt sessions switch 20250301-abc123
-
-# 删除会话
-lt sessions delete 20250301-abc123
-```
+`packages/thing/src` 采用平铺能力模块：`cli/`、`server/`、`routes/`、`agent/`、`session/`、`providers/`、`settings/`、`tools/`、`events/`、`storage/`、`lib/`。
 
 ## 数据存储
 

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AgentAbortData, AgentAbortResponses, HealthCheckData, HealthCheckResponses, ProviderModelsListData, ProviderModelsListErrors, ProviderModelsListResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses, SystemConfigData, SystemConfigResponses } from './types.gen';
+import type { AgentAbortData, AgentAbortResponses, HealthCheckData, HealthCheckResponses, ProviderModelsListByProviderData, ProviderModelsListByProviderResponses, SessionsChatSendData, SessionsChatSendErrors, SessionsChatSendResponses, SessionsCreateData, SessionsCreateResponses, SessionsDeleteData, SessionsDeleteErrors, SessionsDeleteResponses, SessionsForkData, SessionsForkErrors, SessionsForkResponses, SessionsGetData, SessionsGetErrors, SessionsGetResponses, SessionsListData, SessionsListResponses, SessionsMessagesAddData, SessionsMessagesAddErrors, SessionsMessagesAddResponses, SessionsRenameData, SessionsRenameErrors, SessionsRenameResponses, SessionsResumeData, SessionsResumeErrors, SessionsResumeResponses, SystemConfigData, SystemConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -152,8 +152,8 @@ export const healthCheck = <ThrowOnError extends boolean = false>(options?: Opti
 export const systemConfig = <ThrowOnError extends boolean = false>(options?: Options<SystemConfigData, ThrowOnError>) => (options?.client ?? client).get<SystemConfigResponses, unknown, ThrowOnError>({ url: '/system/config', ...options });
 
 /**
- * 获取可用模型列表
+ * 获取指定 provider 的模型列表
  *
- * 从当前配置的 LLM Provider 获取可用模型列表
+ * 从指定 provider 的 API 获取可用模型列表
  */
-export const providerModelsList = <ThrowOnError extends boolean = false>(options?: Options<ProviderModelsListData, ThrowOnError>) => (options?.client ?? client).get<ProviderModelsListResponses, ProviderModelsListErrors, ThrowOnError>({ url: '/provider/models', ...options });
+export const providerModelsListByProvider = <ThrowOnError extends boolean = false>(options: Options<ProviderModelsListByProviderData, ThrowOnError>) => (options.client ?? client).get<ProviderModelsListByProviderResponses, unknown, ThrowOnError>({ url: '/provider/providers/{providerId}/models', ...options });

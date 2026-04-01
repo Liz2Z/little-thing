@@ -8,6 +8,8 @@ import { ToolRegistry } from "../tools/registry.js";
 import { SessionService } from "./service.js";
 import { SessionStore } from "./store.js";
 
+import { AIService } from "../ai/service.js";
+
 export function createSessionService(cwd: string): SessionService {
   const sessionStore = new SessionStore();
   const toolRegistry = new ToolRegistry();
@@ -16,5 +18,7 @@ export function createSessionService(cwd: string): SessionService {
     toolRegistry.register(tool);
   }
 
-  return new SessionService(sessionStore, toolRegistry);
+  const aiService = new AIService(toolRegistry);
+
+  return new SessionService(sessionStore, aiService);
 }

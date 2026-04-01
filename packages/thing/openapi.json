@@ -946,13 +946,24 @@
         }
       }
     },
-    "/provider/models": {
+    "/provider/providers/{providerId}/models": {
       "get": {
-        "operationId": "provider.models.list",
-        "summary": "获取可用模型列表",
-        "description": "从当前配置的 LLM Provider 获取可用模型列表",
+        "operationId": "provider.models.listByProvider",
+        "summary": "获取指定 provider 的模型列表",
+        "description": "从指定 provider 的 API 获取可用模型列表",
         "tags": [
           "Provider"
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "供应商 ID"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -962,7 +973,11 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "models": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -971,70 +986,29 @@
                             "type": "string",
                             "description": "模型 ID"
                           },
-                          "name": {
+                          "object": {
                             "type": "string",
-                            "description": "模型名称"
+                            "const": "model"
                           },
-                          "displayName": {
-                            "description": "显示名称",
-                            "type": "string"
-                          },
-                          "description": {
-                            "description": "模型描述",
-                            "type": "string"
-                          },
-                          "contextLength": {
-                            "description": "上下文长度",
+                          "created": {
+                            "description": "创建时间戳",
                             "type": "number"
+                          },
+                          "owned_by": {
+                            "description": "所有者",
+                            "type": "string"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "object"
                         ]
                       }
                     }
                   },
                   "required": [
-                    "models"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "错误信息"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "错误信息"
-                    }
-                  },
-                  "required": [
-                    "error"
+                    "object",
+                    "data"
                   ]
                 }
               }
