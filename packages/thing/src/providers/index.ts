@@ -1,1 +1,6 @@
-export { createModel } from "./factory.js";
+export {
+  createModel,
+  type KnownProviderSummary,
+  listKnownProviders,
+  listModels,
+} from "./factory.js";

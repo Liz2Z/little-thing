@@ -12,10 +12,10 @@
 - 可预期的业务错误不应该叫 internal error, internal error 仅限于不该发生的事发生了（bug、崩溃、意外的异常）
 - 不允许直接 throw Error，必须定义具体错误类并抛出。错误按照就近原则定义到使用它的文件中，error code 按照 `模块:错误简介` 的格式（如 `PROVIDER:MISSING_API_KEY`），继承自 `errors/base.ts` 中的基础错误类（AppError/NotFoundError/ValidationError/InternalError 等）
 - 不允许为了减少工作量，而修改基础规则，e.g.(biome.json)
+- 不**要直接使**用 homedir() 来获取用户目录，而要使用 xdg-basedir 库来获取
 
 ## server 规范
 
-- 不**要直接使**用 homedir() 来获取用户目录，而要使用 xdg-basedir 库来获取
 - 错误处理不能直接 throw Error，而要 throw 自定义错误类，参考 packages/server/src/errors/index.ts
 - 优先 'hono' 搭配 'hono-openapi' 构建 API 服务
 - 绝对不要手动修改 @littlething/sdk 中的代码

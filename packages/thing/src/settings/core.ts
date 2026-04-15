@@ -22,6 +22,12 @@ export interface SettingsOptions {
   errorHandling?: "strict" | "warn" | "fallback";
 }
 
+export interface SettingsPaths {
+  global: string;
+  credentials: string;
+  local: string;
+}
+
 /**
  * 深度合并两个对象
  */
@@ -176,7 +182,7 @@ export class Settings<T extends ZodObjectLike> {
     this.options = options;
   }
 
-  private getPaths() {
+  getPaths(): SettingsPaths {
     if (!xdgConfig) {
       throw new ConfigError({
         code: "CONFIG:XDG_CONFIG_NOT_AVAILABLE",
@@ -233,17 +239,13 @@ export class Settings<T extends ZodObjectLike> {
         // Enforce permissions (sync)
         try {
           chmodSync(paths.credentials, 0o600);
-        } catch (e) {
-          console.error(e);
-        }
+        } catch {}
 
         const credentials = JSON.parse(
           readFileSync(paths.credentials, "utf-8"),
         );
         merged = deepMerge(merged, credentials);
-      } catch (e) {
-        console.log(e);
-      }
+      } catch {}
     }
 
     // 3. 加载本地配置

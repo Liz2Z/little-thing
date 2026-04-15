@@ -16,6 +16,10 @@ manager.load();
  */
 export const settings = manager.getAccessor();
 
+export function getSettingsPaths() {
+  return manager.getPaths();
+}
+
 /**
  * 重新加载配置
  */

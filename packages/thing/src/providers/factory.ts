@@ -38,9 +38,45 @@ class MissingAPIKeyError extends InternalError {
 }
 
 interface ProviderConfig {
+  id?: string;
+  name?: string;
   npm: string;
   api: string;
   env: string[];
+  doc?: string;
+  models?: Record<
+    string,
+    {
+      id: string;
+      name?: string;
+      reasoning?: boolean;
+      tool_call?: boolean;
+    }
+  >;
+}
+
+export interface KnownProviderSummary {
+  id: string;
+  name: string;
+  api: string;
+  env: string[];
+  npm: string;
+  doc?: string;
+  modelCount: number;
+}
+
+export function listKnownProviders(): KnownProviderSummary[] {
+  return Object.entries(modelsData as Record<string, ProviderConfig>)
+    .map(([providerId, provider]) => ({
+      id: provider.id ?? providerId,
+      name: provider.name ?? providerId,
+      api: provider.api,
+      env: provider.env,
+      npm: provider.npm,
+      doc: provider.doc,
+      modelCount: Object.keys(provider.models ?? {}).length,
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
