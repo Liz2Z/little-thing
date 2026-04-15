@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { streamText } from "ai";
+import type { ToolPermissionService } from "../permissions/index.js";
 import { toCoreMessages } from "../session/convert.js";
 import type { Message, ToolParamValue } from "../session/message.js";
 import type { ToolExecutor } from "../tools/registry.js";
@@ -17,6 +18,19 @@ import type {
   AgentThinkingEvent,
   ToolUseEvent,
 } from "./events.js";
+
+interface LoopGuardOptions {
+  enabled?: boolean;
+  windowSize?: number;
+  maxRepeats?: number;
+}
+
+interface AgentOptions {
+  permissionService?: ToolPermissionService;
+  loopGuard?: LoopGuardOptions;
+  cwd?: string;
+  sessionId?: string;
+}
 
 function toToolSet(tools: AnyTool[]): Record<string, any> {
   const toolSet: Record<string, any> = {};
@@ -38,11 +52,25 @@ function toToolSet(tools: AnyTool[]): Record<string, any> {
 
 export class Agent {
   private activeRuns: Map<string, AgentRunContext> = new Map();
+  private readonly permissionService?: ToolPermissionService;
+  private readonly loopGuard: Required<LoopGuardOptions>;
+  private readonly cwd?: string;
+  private readonly sessionId?: string;
 
   constructor(
     private model: any,
     private toolExecutor: ToolExecutor,
-  ) {}
+    options: AgentOptions = {},
+  ) {
+    this.permissionService = options.permissionService;
+    this.loopGuard = {
+      enabled: options.loopGuard?.enabled ?? true,
+      windowSize: options.loopGuard?.windowSize ?? 6,
+      maxRepeats: options.loopGuard?.maxRepeats ?? 3,
+    };
+    this.cwd = options.cwd;
+    this.sessionId = options.sessionId;
+  }
 
   abort(runId: string): boolean {
     const ctx = this.activeRuns.get(runId);
@@ -62,6 +90,7 @@ export class Agent {
       abortSignal?: AbortSignal;
       provider?: string;
       model?: string;
+      systemPrompt?: string;
     } = {},
   ): AsyncGenerator<AgentEvent> {
     const ctx = createAgentRunContext(
@@ -90,6 +119,8 @@ export class Agent {
         },
       ];
 
+      const iterationFingerprints: string[] = [];
+
       while (true) {
         if (ctx.isAborted() || options.abortSignal?.aborted) {
           yield this.createEvent<AgentAbortEvent>(ctx, {
@@ -110,6 +141,7 @@ export class Agent {
           model: this.model,
           messages: toCoreMessages(messages),
           tools: toToolSet(tools),
+          ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
         });
 
         const toolCalls: Array<{ id: string; name: string; args: unknown }> =
@@ -195,6 +227,25 @@ export class Agent {
         }
 
         if (toolCalls.length > 0) {
+          const fingerprint = JSON.stringify({
+            tools: toolCalls.map((toolCall) => ({
+              name: toolCall.name,
+              args: toolCall.args,
+            })),
+            response: responseContent,
+            thinking: thinkingContent,
+          });
+          iterationFingerprints.push(fingerprint);
+          if (this.isLoopDetected(iterationFingerprints)) {
+            yield this.createEvent<AgentErrorEvent>(ctx, {
+              type: "agent_error",
+              error: "Loop guard triggered: repeated tool call pattern",
+              error_type: "unknown",
+              iteration: ctx.iteration,
+            });
+            return;
+          }
+
           for (const toolCall of toolCalls) {
             if (ctx.isAborted() || options.abortSignal?.aborted) {
               yield this.createEvent<AgentAbortEvent>(ctx, {
@@ -218,10 +269,26 @@ export class Agent {
             let result: { success: boolean; output?: string; error?: string };
 
             try {
-              result = await this.toolExecutor.execute(
-                toolCall.name,
-                toolCall.args as Record<string, unknown>,
-              );
+              const permissionDecision = this.permissionService?.resolve({
+                toolName: toolCall.name,
+                cwd: this.cwd,
+                sessionId: this.sessionId,
+              });
+
+              if (permissionDecision && permissionDecision.action !== "allow") {
+                result = {
+                  success: false,
+                  error:
+                    permissionDecision.action === "ask"
+                      ? "Tool permission requires approval"
+                      : "Tool permission denied by policy",
+                };
+              } else {
+                result = await this.toolExecutor.execute(
+                  toolCall.name,
+                  toolCall.args as Record<string, unknown>,
+                );
+              }
             } catch (error) {
               result = {
                 success: false,
@@ -357,5 +424,25 @@ export class Agent {
     };
 
     return [...messages, toolUseMessage, toolResultMessage];
+  }
+
+  private isLoopDetected(fingerprints: string[]): boolean {
+    if (!this.loopGuard.enabled || fingerprints.length === 0) {
+      return false;
+    }
+
+    const window = fingerprints.slice(-this.loopGuard.windowSize);
+    const counts = new Map<string, number>();
+    for (const fingerprint of window) {
+      counts.set(fingerprint, (counts.get(fingerprint) ?? 0) + 1);
+    }
+
+    for (const repeats of counts.values()) {
+      if (repeats >= this.loopGuard.maxRepeats) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

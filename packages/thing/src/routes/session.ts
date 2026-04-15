@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { z } from "zod";
+import { getSessionService } from "../app/services.js";
 import { NotFoundError } from "../lib/error.js";
-import { createSessionService } from "../session/index.js";
 
 class SessionNotFoundError extends NotFoundError {
   constructor(details?: Record<string, unknown>) {
@@ -37,7 +37,7 @@ const MessageSchema = z.object({
   timestamp: z.string().meta({ description: "消息时间" }),
 });
 
-const sessionService = createSessionService(process.cwd());
+const sessionService = getSessionService();
 
 const app = new Hono();
 
@@ -423,6 +423,68 @@ app.post(
 );
 
 app.post(
+  "/:id/runs",
+  describeRoute({
+    operationId: "sessions.runs.create",
+    summary: "创建 Agent 运行",
+    description: "创建一个新的 Agent 运行并返回 runId，事件请通过全局 SSE 订阅",
+    tags: ["Agent"],
+    responses: {
+      202: {
+        description: "运行已创建",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                run_id: z.string().meta({ description: "运行 ID" }),
+              }),
+            ),
+          },
+        },
+      },
+      404: {
+        description: "会话不存在",
+      },
+    },
+  }),
+  validator(
+    "json",
+    z.object({
+      message: z.string().meta({ description: "用户消息" }),
+      enabledTools: z
+        .array(z.string())
+        .optional()
+        .meta({ description: "启用工具列表" }),
+      provider: z
+        .string()
+        .optional()
+        .meta({ description: "LLM Provider 名称" }),
+      model: z.string().optional().meta({ description: "LLM 模型名称" }),
+      systemPrompt: z
+        .string()
+        .optional()
+        .meta({ description: "运行时系统提示" }),
+    }),
+  ),
+  (c) => {
+    const id = c.req.param("id");
+    const body = c.req.valid("json");
+    const session = sessionService.getSession(id);
+    if (!session) {
+      throw new SessionNotFoundError({ sessionId: id });
+    }
+
+    const runId = sessionService.startRun(id, body.message, {
+      enabledTools: body.enabledTools,
+      provider: body.provider,
+      model: body.model,
+      systemPrompt: body.systemPrompt,
+    });
+    return c.json({ run_id: runId }, 202);
+  },
+);
+
+app.post(
   "/:id/chat",
   describeRoute({
     operationId: "sessions.chat.send",
@@ -495,15 +557,28 @@ app.post(
     }
 
     return streamSSE(c, async (stream) => {
-      for await (const event of sessionService.chat(id, message, {
+      const runId = sessionService.startRun(id, message, {
         enabledTools,
         provider,
         model,
+      });
+
+      for await (const envelope of sessionService.subscribeRunEvents(runId, {
+        signal: c.req.raw.signal,
+        replay: true,
       })) {
         await stream.writeSSE({
-          event: event.type,
-          data: JSON.stringify(event),
+          event: envelope.event.type,
+          data: JSON.stringify(envelope.event),
         });
+
+        if (
+          envelope.event.type === "agent_complete" ||
+          envelope.event.type === "agent_error" ||
+          envelope.event.type === "agent_abort"
+        ) {
+          return;
+        }
       }
     });
   },
@@ -539,8 +614,8 @@ app.post(
   ),
   async (c) => {
     const { run_id } = c.req.valid("json");
-    sessionService.abort(run_id);
-    return c.json({ success: true });
+    const success = sessionService.abort(run_id);
+    return c.json({ success });
   },
 );
 

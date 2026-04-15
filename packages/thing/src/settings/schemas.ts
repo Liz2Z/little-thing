@@ -35,6 +35,38 @@ export const loggingSchema = z.object({
   format: z.enum(["text", "json"]).default("text"),
 });
 
+export const promptSettingsSchema = z.object({
+  globalSystemPrompt: z.string().optional(),
+  providers: z.record(z.string(), z.string()).default({}),
+  models: z.record(z.string(), z.string()).default({}),
+});
+
+export const toolPermissionRuleSchema = z.object({
+  tool: z.string(),
+  action: z.enum(["allow", "ask", "deny"]),
+  cwd: z.string().optional(),
+  sessionId: z.string().optional(),
+});
+
+export const toolsSettingsSchema = z.object({
+  defaultAction: z.enum(["allow", "ask", "deny"]).default("allow"),
+  rules: z.array(toolPermissionRuleSchema).default([]),
+});
+
+export const loopGuardSchema = z.object({
+  enabled: z.boolean().default(true),
+  windowSize: z.number().min(2).max(20).default(6),
+  maxRepeats: z.number().min(1).max(10).default(3),
+});
+
+export const agentSettingsSchema = z.object({
+  loopGuard: loopGuardSchema.default({
+    enabled: true,
+    windowSize: 6,
+    maxRepeats: 3,
+  }),
+});
+
 export const settingsSchema = z.object({
   version: z.string().optional().default("1.0.0"),
   llm: llmSchema.default({
@@ -55,6 +87,21 @@ export const settingsSchema = z.object({
   logging: loggingSchema.default({
     level: "info",
     format: "text",
+  }),
+  prompts: promptSettingsSchema.default({
+    providers: {},
+    models: {},
+  }),
+  tools: toolsSettingsSchema.default({
+    defaultAction: "allow",
+    rules: [],
+  }),
+  agent: agentSettingsSchema.default({
+    loopGuard: {
+      enabled: true,
+      windowSize: 6,
+      maxRepeats: 3,
+    },
   }),
   ui: z.record(z.string(), z.unknown()).default({}),
 });

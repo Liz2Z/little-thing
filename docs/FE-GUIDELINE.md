@@ -2,16 +2,16 @@
 
 ## 技术栈
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| React | ^18.3.1 | UI 框架 |
-| TypeScript | ^5.4.5 | 类型安全 |
-| Vite | ^5.2.0 | 构建工具 |
-| Tailwind CSS | ^3.4.1 | 样式系统 |
-| shadcn/ui | - | UI 组件库 |
-| Zustand | ^4.5.0 | 状态管理 |
-| React Router | ^6.22.0 | 路由管理 |
-| Lucide React | ^0.576.0 | 图标库 |
+| 技术         | 版本     | 用途      |
+| ------------ | -------- | --------- |
+| React        | ^18.3.1  | UI 框架   |
+| TypeScript   | ^5.4.5   | 类型安全  |
+| Vite         | ^5.2.0   | 构建工具  |
+| Tailwind CSS | ^3.4.1   | 样式系统  |
+| shadcn/ui    | -        | UI 组件库 |
+| Zustand      | ^4.5.0   | 状态管理  |
+| React Router | ^6.22.0  | 路由管理  |
+| Lucide React | ^0.576.0 | 图标库    |
 
 ## 重点规则
 
@@ -20,6 +20,7 @@
 - 更倾向于使用命名导出，而不是默认导出
 - useEffect 的依赖里绝对只放需要监听的状态，而不是所有用到的状态都放进去，否则会导致无限循环渲染。忽略 react-hooks/exhaustive-deps eslint 警告.
 - store 的函数（如 Zustand 的 action、selector 返回的函数等）引用是稳定的，不需要放入 useEffect 依赖数组。只有当状态变化需要触发 effect 重新执行时，才将该状态放入依赖数组。
+
   ```tsx
   // 正确：只监听状态变化
   useEffect(() => {
@@ -36,5 +37,5 @@
     }
   }, [initialized, initialize]);
   ```
-- 优先使用 shadcn/ui 提供的组件，而不是直接自己实现相同功能的组件。
 
+- 优先使用 shadcn/ui 提供的组件，而不是直接自己实现相同功能的组件。

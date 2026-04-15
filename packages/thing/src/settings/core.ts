@@ -5,7 +5,6 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { xdgConfig } from "xdg-basedir";
 import type { z } from "zod";
@@ -178,7 +177,13 @@ export class Settings<T extends ZodObjectLike> {
   }
 
   private getPaths() {
-    const configDir = xdgConfig ?? join(homedir(), ".config");
+    if (!xdgConfig) {
+      throw new ConfigError({
+        code: "CONFIG:XDG_CONFIG_NOT_AVAILABLE",
+        message: "XDG config 目录不可用",
+      });
+    }
+    const configDir = xdgConfig;
     const globalSettingsPath =
       this.options.globalPath ?? join(configDir, this.appName, "settings.json");
     const globalCredentialsPath =

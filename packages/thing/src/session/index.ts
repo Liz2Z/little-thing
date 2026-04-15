@@ -3,12 +3,11 @@ export type { Message, MessageContent } from "./message.js";
 export { SessionService } from "./service.js";
 export type { Session, SessionMeta } from "./session.schema.js";
 
+import { AIService } from "../ai/service.js";
 import { createAllTools } from "../tools/index.js";
 import { ToolRegistry } from "../tools/registry.js";
 import { SessionService } from "./service.js";
 import { SessionStore } from "./store.js";
-
-import { AIService } from "../ai/service.js";
 
 export function createSessionService(cwd: string): SessionService {
   const sessionStore = new SessionStore();
@@ -18,7 +17,7 @@ export function createSessionService(cwd: string): SessionService {
     toolRegistry.register(tool);
   }
 
-  const aiService = new AIService(toolRegistry);
+  const aiService = new AIService(toolRegistry, cwd);
 
   return new SessionService(sessionStore, aiService);
 }

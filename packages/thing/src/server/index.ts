@@ -2,7 +2,13 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { AppError, InternalError } from "../lib/error";
-import { providerRoutes, sessionRoutes, systemRoutes } from "../routes";
+import {
+  eventRoutes,
+  providerRoutes,
+  runRoutes,
+  sessionRoutes,
+  systemRoutes,
+} from "../routes";
 import { settings } from "../settings";
 
 class ConfigNotLoadedError extends InternalError {
@@ -66,6 +72,8 @@ export function createServerApp() {
       }),
     )
     .route("/sessions", sessionRoutes)
+    .route("/events", eventRoutes)
+    .route("/runs", runRoutes)
     .route("/system", systemRoutes)
     .route("/provider", providerRoutes);
 
